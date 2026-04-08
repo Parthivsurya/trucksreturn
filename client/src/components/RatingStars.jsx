@@ -10,7 +10,7 @@ export default function RatingStars({ rating = 0, size = 16, interactive = false
           className={`transition-colors ${
             i < Math.round(rating)
               ? 'fill-amber-400 text-amber-400'
-              : 'text-gray-600'
+              : 'text-slate-300'
           } ${interactive ? 'cursor-pointer hover:text-amber-400' : ''}`}
           onClick={() => interactive && onChange?.(i + 1)}
         />

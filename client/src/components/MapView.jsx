@@ -2,39 +2,38 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fix leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  iconUrl:       'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl:     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
 const pickupIcon = new L.DivIcon({
-  html: '<div style="background:#10b981;width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 8px rgba(16,185,129,0.5)"></div>',
+  html: '<div style="background:#16a34a;width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 6px rgba(22,163,74,0.4)"></div>',
   className: '',
   iconSize: [12, 12],
   iconAnchor: [6, 6],
 });
 
 const deliveryIcon = new L.DivIcon({
-  html: '<div style="background:#ef4444;width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 8px rgba(239,68,68,0.5)"></div>',
+  html: '<div style="background:#dc2626;width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 6px rgba(220,38,38,0.4)"></div>',
   className: '',
   iconSize: [12, 12],
   iconAnchor: [6, 6],
 });
 
 const truckIcon = new L.DivIcon({
-  html: '<div style="background:#3b82f6;width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 10px rgba(59,130,246,0.6)"></div>',
+  html: '<div style="background:#0B2545;width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 8px rgba(11,37,69,0.4)"></div>',
   className: '',
   iconSize: [14, 14],
   iconAnchor: [7, 7],
 });
 
 export default function MapView({
-  markers = [],        // [{ lat, lng, type: 'pickup'|'delivery'|'truck', label }]
-  routes = [],         // [{ from: [lat,lng], to: [lat,lng], color }]
-  center = [20.5937, 78.9629],  // India center
+  markers = [],
+  routes = [],
+  center = [20.5937, 78.9629],
   zoom = 5,
   className = '',
   style = {},
@@ -61,7 +60,6 @@ export default function MapView({
       maxZoom: 19,
     }).addTo(map);
 
-    // Add markers
     const bounds = [];
     markers.forEach(m => {
       const icon = m.type === 'pickup' ? pickupIcon : m.type === 'delivery' ? deliveryIcon : truckIcon;
@@ -70,18 +68,16 @@ export default function MapView({
       bounds.push([m.lat, m.lng]);
     });
 
-    // Draw route lines
     routes.forEach(r => {
       L.polyline([r.from, r.to], {
-        color: r.color || '#3b82f6',
+        color: r.color || '#0B2545',
         weight: 3,
-        opacity: 0.7,
-        dashArray: r.dashed ? '10, 10' : null,
+        opacity: 0.6,
+        dashArray: r.dashed ? '8, 8' : null,
       }).addTo(map);
       bounds.push(r.from, r.to);
     });
 
-    // Fit bounds
     if (bounds.length > 1) {
       map.fitBounds(bounds, { padding: [40, 40] });
     } else if (bounds.length === 1) {
@@ -99,7 +95,7 @@ export default function MapView({
   return (
     <div
       ref={mapRef}
-      className={`w-full rounded-2xl border border-white/10 ${className}`}
+      className={`w-full rounded-2xl border border-slate-200 shadow-sm ${className}`}
       style={{ height: '400px', ...style }}
     />
   );

@@ -4,48 +4,55 @@ import { useAuth } from './context/AuthContext.jsx';
 import Navbar from './components/Navbar.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import RequiresTruck from './components/RequiresTruck.jsx';
+import AdminRoute from './components/AdminRoute.jsx';
+
 import Landing from './pages/Landing.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
+
 import DriverDashboard from './pages/driver/Dashboard.jsx';
 import SetAvailability from './pages/driver/SetAvailability.jsx';
 import LoadFinder from './pages/driver/LoadFinder.jsx';
 import LoadDetails from './pages/driver/LoadDetails.jsx';
 import DriverBookings from './pages/driver/Bookings.jsx';
 import RegisterTruck from './pages/driver/RegisterTruck.jsx';
+
 import ShipperDashboard from './pages/shipper/Dashboard.jsx';
 import PostLoad from './pages/shipper/PostLoad.jsx';
 import MyLoads from './pages/shipper/MyLoads.jsx';
 import LoadMatches from './pages/shipper/LoadMatches.jsx';
 import Tracking from './pages/shipper/Tracking.jsx';
 
-export default function App() {
+import AdminLogin from './pages/admin/AdminLogin.jsx';
+import AdminDashboard from './pages/admin/AdminDashboard.jsx';
+import AdminUsers from './pages/admin/AdminUsers.jsx';
+import AdminLoads from './pages/admin/AdminLoads.jsx';
+import AdminBookings from './pages/admin/AdminBookings.jsx';
+import AdminSettings from './pages/admin/AdminSettings.jsx';
+
+const toastStyle = {
+  style: {
+    background: '#ffffff',
+    color: '#0B2545',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.07)',
+  },
+};
+
+function MainApp() {
   const { user, loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-navy-900 flex items-center justify-center">
-        <div className="animate-pulse flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 animate-glow" />
-          <p className="text-gray-400 text-sm">Loading ReturnLoad...</p>
-        </div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-navy-900 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-navy-900">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          style: {
-            background: '#1e293b',
-            color: '#e2e8f0',
-            border: '1px solid rgba(255,255,255,0.1)',
-          },
-        }}
-      />
       <Routes>
         <Route path="/" element={user ? <Navigate to={user.role === 'driver' ? '/driver' : '/shipper'} /> : <Landing />} />
         <Route path="/login" element={user ? <Navigate to={user.role === 'driver' ? '/driver' : '/shipper'} /> : <Login />} />
@@ -69,5 +76,25 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <>
+      <Toaster position="top-right" toastOptions={toastStyle} />
+      <Routes>
+        {/* Admin routes — own context, own layout, no main Navbar */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+        <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+        <Route path="/admin/loads" element={<AdminRoute><AdminLoads /></AdminRoute>} />
+        <Route path="/admin/bookings" element={<AdminRoute><AdminBookings /></AdminRoute>} />
+        <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+
+        {/* Everything else */}
+        <Route path="/*" element={<MainApp />} />
+      </Routes>
+    </>
   );
 }

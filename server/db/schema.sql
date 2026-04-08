@@ -7,10 +7,11 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT UNIQUE NOT NULL,
   phone TEXT,
   password_hash TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('driver', 'shipper')),
+  role TEXT NOT NULL CHECK (role IN ('driver', 'shipper', 'admin')),
   avatar_url TEXT,
   avg_rating REAL DEFAULT 0,
   total_ratings INTEGER DEFAULT 0,
+  is_active INTEGER DEFAULT 1,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -101,10 +102,11 @@ CREATE TABLE IF NOT EXISTS tracking_updates (
 );
 
 -- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_loads_status ON loads(status);
-CREATE INDEX IF NOT EXISTS idx_loads_pickup ON loads(pickup_lat, pickup_lng);
+CREATE INDEX IF NOT EXISTS idx_loads_status       ON loads(status);
+CREATE INDEX IF NOT EXISTS idx_loads_pickup        ON loads(pickup_lat, pickup_lng);
 CREATE INDEX IF NOT EXISTS idx_availability_status ON driver_availability(status);
 CREATE INDEX IF NOT EXISTS idx_availability_location ON driver_availability(current_lat, current_lng);
-CREATE INDEX IF NOT EXISTS idx_bookings_driver ON bookings(driver_id);
-CREATE INDEX IF NOT EXISTS idx_bookings_shipper ON bookings(shipper_id);
-CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
+CREATE INDEX IF NOT EXISTS idx_bookings_driver     ON bookings(driver_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_shipper    ON bookings(shipper_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_status     ON bookings(status);
+CREATE INDEX IF NOT EXISTS idx_users_role          ON users(role);

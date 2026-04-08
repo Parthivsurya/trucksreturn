@@ -30,47 +30,45 @@ export default function ShipperDashboard() {
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div>
-            <h1 className="section-title">Welcome, {user?.name?.split(' ')[0]} 📦</h1>
+            <h1 className="section-title">Welcome, {user?.name?.split(' ')[0]}</h1>
             <p className="section-subtitle">Manage your shipments and find trucks</p>
           </div>
           <div className="flex gap-3">
             <Link to="/shipper/post-load" className="btn-primary flex items-center gap-2">
-              <PlusCircle size={18} /> Post New Load
+              <PlusCircle size={17} /> Post New Load
             </Link>
             <Link to="/shipper/my-loads" className="btn-secondary flex items-center gap-2">
-              <List size={18} /> My Loads
+              <List size={17} /> My Loads
             </Link>
           </div>
         </div>
 
         {stats && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <StatCard icon={Package} label="Total Loads" value={stats.totalLoads} color="blue" />
-            <StatCard icon={Truck} label="Active Loads" value={stats.activeLoads} color="green" />
-            <StatCard icon={BookOpen} label="Bookings" value={stats.totalBookings} color="amber" />
-            <StatCard icon={IndianRupee} label="Total Spent" value={stats.totalSpent} color="purple" prefix="₹" />
+            <StatCard icon={Package}      label="Total Loads"   value={stats.totalLoads}    color="blue" />
+            <StatCard icon={Truck}        label="Active Loads"  value={stats.activeLoads}   color="green" />
+            <StatCard icon={BookOpen}     label="Bookings"      value={stats.totalBookings} color="amber" />
+            <StatCard icon={IndianRupee}  label="Total Spent"   value={stats.totalSpent}    color="purple" prefix="₹" />
           </div>
         )}
 
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-white">Recent Loads</h2>
-          <Link to="/shipper/my-loads" className="text-blue-400 text-sm hover:text-blue-300 flex items-center gap-1">
-            View all <ArrowRight size={14} />
+          <h2 className="text-base font-bold text-navy-900">Recent Loads</h2>
+          <Link to="/shipper/my-loads" className="text-navy-600 text-sm hover:underline flex items-center gap-1">
+            View all <ArrowRight size={13} />
           </Link>
         </div>
 
         {recentLoads.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {recentLoads.map(load => (
-              <LoadCard key={load.id} load={load} onClick={() => {}} />
-            ))}
+            {recentLoads.map(load => <LoadCard key={load.id} load={load} />)}
           </div>
         ) : (
-          <div className="card text-center py-12">
-            <Package size={40} className="text-gray-700 mx-auto mb-3" />
-            <p className="text-gray-400 mb-4">No loads posted yet.</p>
+          <div className="card text-center py-14">
+            <Package size={36} className="text-slate-200 mx-auto mb-3" />
+            <p className="text-slate-500 mb-4">No loads posted yet.</p>
             <Link to="/shipper/post-load" className="btn-primary inline-flex items-center gap-2">
-              <PlusCircle size={16} /> Post Your First Load
+              <PlusCircle size={15} /> Post Your First Load
             </Link>
           </div>
         )}

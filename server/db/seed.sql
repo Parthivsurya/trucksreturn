@@ -4,6 +4,10 @@
 -- Passwords are all 'demo1234' hashed with bcryptjs
 -- $2a$10$k1M53UxAPKgxFB9nOaBdTO/A8Uuxw7TdCjSaK4uHZJPytDETMU56G
 
+-- Admin user (password: admin123)
+INSERT OR IGNORE INTO users (name, email, phone, password_hash, role) VALUES
+('Platform Admin', 'admin@returnload.com', '9000000000', '$2a$10$KkOZulKUiy7whxRQsoYLV.xhIR5g.UaefWnJ4YV6etaLhiqnyQixm', 'admin');
+
 -- Drivers
 INSERT OR IGNORE INTO users (id, name, email, phone, password_hash, role, avg_rating, total_ratings) VALUES
 (1, 'Rajesh Kumar', 'rajesh@demo.com', '9876543210', '$2a$10$k1M53UxAPKgxFB9nOaBdTO/A8Uuxw7TdCjSaK4uHZJPytDETMU56G', 'driver', 4.5, 28),
