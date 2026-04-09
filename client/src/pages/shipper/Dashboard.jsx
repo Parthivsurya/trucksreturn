@@ -54,7 +54,7 @@ export default function ShipperDashboard() {
 
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-bold text-navy-900">Recent Loads</h2>
-          <Link to="/shipper/my-loads" className="text-navy-600 text-sm hover:underline flex items-center gap-1">
+          <Link to="/shipper/my-loads" className="text-sm hover:underline flex items-center gap-1 font-medium" style={{ color: 'var(--accent)' }}>
             View all <ArrowRight size={13} />
           </Link>
         </div>

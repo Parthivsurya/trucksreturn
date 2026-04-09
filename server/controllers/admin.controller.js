@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import db from '../db/db.js';
+import { sendLoadStatusUpdate, testEmail as sendTestEmail } from '../services/email.service.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'smartreturnload_dev_secret';
 
@@ -135,6 +136,47 @@ export function updateUserStatus(req, res) {
   }
 }
 
+export function batchDeleteUsers(req, res) {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required.' });
+    }
+
+    db.transaction(() => {
+      for (const id of ids) {
+        const user = db.prepare('SELECT id, role FROM users WHERE id = ?').get(id);
+        if (!user || user.role === 'admin') continue;
+
+        const bookingIds = db.prepare(
+          'SELECT id FROM bookings WHERE driver_id = ? OR shipper_id = ?'
+        ).all(id, id).map(b => b.id);
+
+        const loadIds = db.prepare('SELECT id FROM loads WHERE user_id = ?').all(id).map(l => l.id);
+        const loadBookingIds = loadIds.length
+          ? db.prepare(`SELECT id FROM bookings WHERE load_id IN (${loadIds.map(() => '?').join(',')})`).all(...loadIds).map(b => b.id)
+          : [];
+
+        const allBookingIds = [...new Set([...bookingIds, ...loadBookingIds])];
+        if (allBookingIds.length) {
+          const ph = allBookingIds.map(() => '?').join(',');
+          db.prepare(`DELETE FROM ratings WHERE booking_id IN (${ph})`).run(...allBookingIds);
+          db.prepare(`DELETE FROM tracking_updates WHERE booking_id IN (${ph})`).run(...allBookingIds);
+          db.prepare(`DELETE FROM bookings WHERE id IN (${ph})`).run(...allBookingIds);
+        }
+        if (loadIds.length) {
+          db.prepare(`DELETE FROM loads WHERE id IN (${loadIds.map(() => '?').join(',')})`).run(...loadIds);
+        }
+        db.prepare('DELETE FROM users WHERE id = ?').run(id);
+      }
+    })();
+
+    res.json({ message: `${ids.length} user(s) deleted.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 export function createUser(req, res) {
   try {
     const { name, email, phone, password, role } = req.body;
@@ -165,7 +207,37 @@ export function deleteUser(req, res) {
     if (!user) return res.status(404).json({ error: 'User not found.' });
     if (user.role === 'admin') return res.status(400).json({ error: 'Cannot delete admin accounts.' });
 
-    db.prepare('DELETE FROM users WHERE id = ?').run(req.params.id);
+    const id = req.params.id;
+    db.transaction(() => {
+      // bookings where this user is driver or shipper
+      const bookingIds = db.prepare(
+        'SELECT id FROM bookings WHERE driver_id = ? OR shipper_id = ?'
+      ).all(id, id).map(b => b.id);
+
+      // bookings tied to loads posted by this shipper
+      const loadIds = db.prepare('SELECT id FROM loads WHERE user_id = ?').all(id).map(l => l.id);
+      const loadBookingIds = loadIds.length
+        ? db.prepare(`SELECT id FROM bookings WHERE load_id IN (${loadIds.map(() => '?').join(',')})`).all(...loadIds).map(b => b.id)
+        : [];
+
+      const allBookingIds = [...new Set([...bookingIds, ...loadBookingIds])];
+
+      if (allBookingIds.length) {
+        const ph = allBookingIds.map(() => '?').join(',');
+        db.prepare(`DELETE FROM ratings WHERE booking_id IN (${ph})`).run(...allBookingIds);
+        db.prepare(`DELETE FROM tracking_updates WHERE booking_id IN (${ph})`).run(...allBookingIds);
+        db.prepare(`DELETE FROM bookings WHERE id IN (${ph})`).run(...allBookingIds);
+      }
+
+      // delete loads posted by this user (as shipper)
+      if (loadIds.length) {
+        db.prepare(`DELETE FROM loads WHERE id IN (${loadIds.map(() => '?').join(',')})`).run(...loadIds);
+      }
+
+      // ON DELETE CASCADE handles trucks, documents, driver_availability
+      db.prepare('DELETE FROM users WHERE id = ?').run(id);
+    })();
+
     res.json({ message: 'User deleted.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -214,6 +286,10 @@ export function updateLoadStatus(req, res) {
 
     db.prepare('UPDATE loads SET status = ? WHERE id = ?').run(status, req.params.id);
     res.json({ message: `Load status updated to ${status}.` });
+
+    const fullLoad  = db.prepare('SELECT * FROM loads WHERE id = ?').get(req.params.id);
+    const shipper   = db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(fullLoad.user_id);
+    if (shipper) sendLoadStatusUpdate({ load: fullLoad, newStatus: status, shipper }).catch(() => {});
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -256,6 +332,32 @@ export function getBookings(req, res) {
 
 // ── Load CRUD ─────────────────────────────────────────────────────────────────
 
+export function batchDeleteLoads(req, res) {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required.' });
+    }
+
+    db.transaction(() => {
+      for (const id of ids) {
+        const bookingIds = db.prepare('SELECT id FROM bookings WHERE load_id = ?').all(id).map(b => b.id);
+        if (bookingIds.length) {
+          const ph = bookingIds.map(() => '?').join(',');
+          db.prepare(`DELETE FROM ratings WHERE booking_id IN (${ph})`).run(...bookingIds);
+          db.prepare(`DELETE FROM tracking_updates WHERE booking_id IN (${ph})`).run(...bookingIds);
+          db.prepare(`DELETE FROM bookings WHERE id IN (${ph})`).run(...bookingIds);
+        }
+        db.prepare('DELETE FROM loads WHERE id = ?').run(id);
+      }
+    })();
+
+    res.json({ message: `${ids.length} load(s) deleted.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 export function createLoad(req, res) {
   try {
     const {
@@ -296,7 +398,17 @@ export function deleteLoad(req, res) {
     const load = db.prepare('SELECT id FROM loads WHERE id = ?').get(req.params.id);
     if (!load) return res.status(404).json({ error: 'Load not found.' });
 
-    db.prepare('DELETE FROM loads WHERE id = ?').run(req.params.id);
+    db.transaction(() => {
+      const bookingIds = db.prepare('SELECT id FROM bookings WHERE load_id = ?').all(req.params.id).map(b => b.id);
+      if (bookingIds.length) {
+        const ph = bookingIds.map(() => '?').join(',');
+        db.prepare(`DELETE FROM ratings WHERE booking_id IN (${ph})`).run(...bookingIds);
+        db.prepare(`DELETE FROM tracking_updates WHERE booking_id IN (${ph})`).run(...bookingIds);
+        db.prepare(`DELETE FROM bookings WHERE id IN (${ph})`).run(...bookingIds);
+      }
+      db.prepare('DELETE FROM loads WHERE id = ?').run(req.params.id);
+    })();
+
     res.json({ message: 'Load deleted.' });
   } catch (err) {
     res.status(500).json({ error: err.message });

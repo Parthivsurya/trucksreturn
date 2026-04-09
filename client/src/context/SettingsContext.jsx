@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
 
 const SettingsContext = createContext({
-  settings: { site_name: 'ReturnLoad', logo_url: '', primary_color: '#0B2545', theme_preset: 'navy' },
+  settings: { site_name: 'ReturnLoad', logo_url: '', primary_color: '#0f172a', accent_color: '#f59e0b', theme_preset: 'freight' },
   refresh: () => {},
 });
 
@@ -10,8 +10,9 @@ export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState({
     site_name: 'ReturnLoad',
     logo_url: '',
-    primary_color: '#0B2545',
-    theme_preset: 'navy',
+    primary_color: '#0f172a',
+    accent_color: '#f59e0b',
+    theme_preset: 'freight',
   });
 
   async function refresh() {
@@ -24,8 +25,11 @@ export function SettingsProvider({ children }) {
   useEffect(() => { refresh(); }, []);
 
   useEffect(() => {
-    applyTheme(settings.primary_color || '#0B2545');
-  }, [settings.primary_color]);
+    applyTheme(
+      settings.primary_color || '#0f172a',
+      settings.accent_color  || '#f59e0b',
+    );
+  }, [settings.primary_color, settings.accent_color]);
 
   return (
     <SettingsContext.Provider value={{ settings, setSettings, refresh }}>
@@ -33,6 +37,8 @@ export function SettingsProvider({ children }) {
     </SettingsContext.Provider>
   );
 }
+
+// ── Colour helpers ────────────────────────────────────────────────────────────
 
 function hexToRgb(hex) {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -42,10 +48,8 @@ function hexToRgb(hex) {
 function darken(hex, amount = 0.15) {
   const rgb = hexToRgb(hex);
   if (!rgb) return hex;
-  const r = Math.max(0, Math.round(rgb.r * (1 - amount)));
-  const g = Math.max(0, Math.round(rgb.g * (1 - amount)));
-  const b = Math.max(0, Math.round(rgb.b * (1 - amount)));
-  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  const c = v => Math.max(0, Math.round(v * (1 - amount))).toString(16).padStart(2, '0');
+  return `#${c(rgb.r)}${c(rgb.g)}${c(rgb.b)}`;
 }
 
 function lighten(hex, opacity = 0.08) {
@@ -54,11 +58,26 @@ function lighten(hex, opacity = 0.08) {
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
 }
 
-function applyTheme(primary) {
-  const dark   = darken(primary, 0.12);
-  const subtle = lighten(primary, 0.08);
-  const ring   = lighten(primary, 0.12);
-  const border = lighten(primary, 0.35);
+/** Returns #0f172a (dark) or #ffffff (light) depending on accent luminance */
+function contrastOn(hex) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return '#ffffff';
+  const lum = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+  return lum > 0.5 ? '#0f172a' : '#ffffff';
+}
+
+// ── Theme injector ────────────────────────────────────────────────────────────
+
+function applyTheme(primary, accent) {
+  const primaryDark   = darken(primary, 0.14);
+  const primarySubtle = lighten(primary, 0.07);
+  const primaryBorder = lighten(primary, 0.30);
+  const primaryRing   = lighten(primary, 0.10);
+
+  const accentDark    = darken(accent, 0.14);
+  const accentSubtle  = lighten(accent, 0.12);
+  const accentBorder  = lighten(accent, 0.35);
+  const accentText    = contrastOn(accent);   // dark/light text on accent bg
 
   let el = document.getElementById('rl-theme');
   if (!el) {
@@ -69,59 +88,76 @@ function applyTheme(primary) {
 
   el.textContent = `
     :root {
-      --primary: ${primary};
-      --primary-dark: ${dark};
-      --primary-subtle: ${subtle};
+      --primary:        ${primary};
+      --primary-dark:   ${primaryDark};
+      --primary-subtle: ${primarySubtle};
+      --accent:         ${accent};
+      --accent-dark:    ${accentDark};
+      --accent-subtle:  ${accentSubtle};
+      --accent-text:    ${accentText};
     }
 
-    /* Tailwind bg-navy-* overrides */
-    .bg-navy-900  { background-color: ${primary} !important; }
-    .bg-navy-800  { background-color: ${dark}    !important; }
-    .bg-navy-50   { background-color: ${subtle}  !important; }
+    /* ── Primary overrides ────────────────── */
+    .bg-navy-900  { background-color: ${primary}       !important; }
+    .bg-navy-800  { background-color: ${primaryDark}   !important; }
+    .bg-navy-50   { background-color: ${primarySubtle} !important; }
 
-    /* Tailwind text-navy-* overrides */
-    .text-navy-900 { color: ${primary} !important; }
-    .text-navy-400 { color: ${lighten(primary, 0.55)} !important; }
+    .text-navy-900 { color: ${primary}     !important; }
+    .text-navy-600 { color: ${darken(primary, 0.05)} !important; }
+    .text-navy-400 { color: ${lighten(primary, 0.5)} !important; }
+    .text-navy-300 { color: ${lighten(accent, 0.75)} !important; }
 
-    /* Hover variants */
-    .hover\\:bg-navy-900:hover  { background-color: ${primary} !important; }
-    .hover\\:bg-navy-800:hover  { background-color: ${dark}    !important; }
-    .hover\\:bg-navy-50:hover   { background-color: ${subtle}  !important; }
+    .hover\\:bg-navy-900:hover   { background-color: ${primary}       !important; }
+    .hover\\:bg-navy-800:hover   { background-color: ${primaryDark}   !important; }
+    .hover\\:bg-navy-50:hover    { background-color: ${primarySubtle} !important; }
     .hover\\:text-navy-900:hover { color: ${primary} !important; }
 
-    /* Border */
     .border-navy-900 { border-color: ${primary} !important; }
-    .border-navy-200 { border-color: ${lighten(primary, 0.25)} !important; }
+    .border-navy-200 { border-color: ${lighten(primary, 0.20)} !important; }
 
-    /* Focus ring / border on inputs */
-    .focus\\:border-navy-900\\/40:focus { border-color: ${border} !important; }
-    .focus\\:ring-navy-900\\/10:focus   { --tw-ring-color: ${ring} !important; }
+    .focus\\:border-navy-900\\/40:focus { border-color: ${primaryBorder} !important; }
+    .focus\\:ring-navy-900\\/10:focus   { --tw-ring-color: ${primaryRing} !important; }
 
-    /* Custom component classes */
+    /* ── Accent overrides ─────────────────── */
+    .bg-accent        { background-color: ${accent}       !important; }
+    .bg-accent-subtle { background-color: ${accentSubtle} !important; }
+    .text-accent      { color: ${accent} !important; }
+    .border-accent    { border-color: ${accent} !important; }
+
+    /* ── Component classes ────────────────── */
     .btn-primary {
       background-color: ${primary} !important;
+      color: #fff !important;
     }
     .btn-primary:hover:not(:disabled) {
-      background-color: ${dark} !important;
+      background-color: ${primaryDark} !important;
+    }
+    .btn-accent {
+      background-color: ${accent}   !important;
+      color: ${accentText}          !important;
+    }
+    .btn-accent:hover:not(:disabled) {
+      background-color: ${accentDark} !important;
     }
     .btn-secondary {
-      color: ${primary} !important;
-      border-color: ${lighten(primary, 0.25)} !important;
+      color: ${primary}                         !important;
+      border-color: ${lighten(primary, 0.22)}   !important;
     }
     .btn-secondary:hover {
-      background-color: ${subtle} !important;
+      background-color: ${primarySubtle} !important;
     }
     .card-hover:hover {
-      border-color: ${lighten(primary, 0.25)} !important;
+      border-color: ${lighten(accent, 0.30)} !important;
+      box-shadow: 0 4px 20px ${lighten(primary, 0.06)} !important;
     }
     .badge-booked {
-      background-color: ${subtle}  !important;
-      color: ${primary}  !important;
-      border-color: ${lighten(primary, 0.25)} !important;
+      background-color: ${accentSubtle} !important;
+      color: ${darken(accent, 0.15)}    !important;
+      border-color: ${accentBorder}     !important;
     }
     .input-field:focus {
-      border-color: ${border} !important;
-      --tw-ring-color: ${ring} !important;
+      border-color: ${primaryBorder}   !important;
+      --tw-ring-color: ${primaryRing}  !important;
     }
     .section-title { color: ${primary} !important; }
   `;

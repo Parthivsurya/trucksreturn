@@ -39,7 +39,7 @@ export default function LoadCard({ load, onClick, showDistance = false }) {
           <Weight size={13} />
           <span>{load.weight_tons} tons</span>
         </div>
-        <div className="flex items-center gap-1.5 text-navy-900 font-semibold">
+        <div className="flex items-center gap-1.5 font-bold" style={{ color: 'var(--accent)' }}>
           <IndianRupee size={13} />
           <span>₹{Number(load.offered_price).toLocaleString('en-IN')}</span>
         </div>

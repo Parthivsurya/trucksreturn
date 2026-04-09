@@ -1,4 +1,9 @@
 import db from '../db/db.js';
+import {
+  sendBookingCreatedToShipper,
+  sendBookingCreatedToDriver,
+  sendBookingStatusUpdate,
+} from '../services/email.service.js';
 
 export function createBooking(req, res) {
   try {
@@ -34,6 +39,15 @@ export function createBooking(req, res) {
     `).get(result.lastInsertRowid);
 
     res.status(201).json({ booking });
+
+    // Fire-and-forget emails
+    const driver = db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(req.user.id);
+    const fullLoad = db.prepare('SELECT * FROM loads WHERE id = ?').get(load_id);
+    const newBooking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(result.lastInsertRowid);
+    Promise.all([
+      sendBookingCreatedToShipper({ booking: newBooking, load: fullLoad, driver, truck }),
+      sendBookingCreatedToDriver({ booking: newBooking, load: fullLoad, driver }),
+    ]).catch(() => {});
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -72,6 +86,15 @@ export function updateBookingStatus(req, res) {
     `).get(req.params.id);
 
     res.json({ booking: updated });
+
+    // Notify both driver and shipper about the status change
+    const fullLoad = db.prepare('SELECT * FROM loads WHERE id = ?').get(booking.load_id);
+    const driver   = db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(booking.driver_id);
+    const shipper  = db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(booking.shipper_id);
+    Promise.all([
+      sendBookingStatusUpdate({ booking, load: fullLoad, newStatus: status, toUser: driver,  role: 'driver'  }),
+      sendBookingStatusUpdate({ booking, load: fullLoad, newStatus: status, toUser: shipper, role: 'shipper' }),
+    ]).catch(() => {});
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

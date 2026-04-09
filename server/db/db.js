@@ -72,8 +72,63 @@ function runMigrations() {
       INSERT INTO settings VALUES ('logo_url',      '');
       INSERT INTO settings VALUES ('primary_color', '#0B2545');
       INSERT INTO settings VALUES ('theme_preset',  'navy');
+      INSERT INTO settings VALUES ('smtp_enabled',  '0');
+      INSERT INTO settings VALUES ('smtp_host',     '');
+      INSERT INTO settings VALUES ('smtp_port',     '587');
+      INSERT INTO settings VALUES ('smtp_secure',   '0');
+      INSERT INTO settings VALUES ('smtp_user',     '');
+      INSERT INTO settings VALUES ('smtp_pass',     '');
+      INSERT INTO settings VALUES ('smtp_from_name','');
+      INSERT INTO settings VALUES ('smtp_from_email','');
     `);
     console.log('✅ Migration: settings table created');
+  }
+
+  // Migration 3b: add SMTP settings if settings table exists but SMTP keys are missing
+  const hasSmtp = db.prepare("SELECT key FROM settings WHERE key='smtp_enabled'").get();
+  if (!hasSmtp) {
+    db.exec(`
+      INSERT OR IGNORE INTO settings VALUES ('smtp_enabled',  '0');
+      INSERT OR IGNORE INTO settings VALUES ('smtp_host',     '');
+      INSERT OR IGNORE INTO settings VALUES ('smtp_port',     '587');
+      INSERT OR IGNORE INTO settings VALUES ('smtp_secure',   '0');
+      INSERT OR IGNORE INTO settings VALUES ('smtp_user',     '');
+      INSERT OR IGNORE INTO settings VALUES ('smtp_pass',     '');
+      INSERT OR IGNORE INTO settings VALUES ('smtp_from_name','');
+      INSERT OR IGNORE INTO settings VALUES ('smtp_from_email','');
+    `);
+    console.log('✅ Migration: SMTP settings added');
+  }
+
+  // Migration 3d: add accent_color setting
+  const hasAccent = db.prepare("SELECT key FROM settings WHERE key='accent_color'").get();
+  if (!hasAccent) {
+    db.exec(`INSERT OR IGNORE INTO settings VALUES ('accent_color', '#f59e0b');`);
+    console.log('✅ Migration: accent_color setting added');
+  }
+
+  // Migration 3e: upgrade to Classic Freight theme if still on original defaults
+  const currentPrimary = db.prepare("SELECT value FROM settings WHERE key='primary_color'").get();
+  if (currentPrimary?.value === '#0B2545') {
+    db.exec(`
+      UPDATE settings SET value='#0f172a' WHERE key='primary_color';
+      UPDATE settings SET value='#f59e0b' WHERE key='accent_color';
+      UPDATE settings SET value='freight'  WHERE key='theme_preset';
+    `);
+    console.log('✅ Migration: upgraded to Classic Freight theme');
+  }
+
+  // Migration 3c: add per-notification toggles
+  const hasEmailToggles = db.prepare("SELECT key FROM settings WHERE key='email_on_login'").get();
+  if (!hasEmailToggles) {
+    db.exec(`
+      INSERT OR IGNORE INTO settings VALUES ('email_on_login',          '1');
+      INSERT OR IGNORE INTO settings VALUES ('email_on_booking_shipper','1');
+      INSERT OR IGNORE INTO settings VALUES ('email_on_booking_driver', '1');
+      INSERT OR IGNORE INTO settings VALUES ('email_on_status_change',  '1');
+      INSERT OR IGNORE INTO settings VALUES ('email_on_load_status',    '1');
+    `);
+    console.log('✅ Migration: per-notification email toggles added');
   }
 
   // Migration 4: fix child tables whose FK references were auto-renamed to users_old
@@ -153,6 +208,58 @@ function runMigrations() {
       COMMIT;
     `);
     console.log('✅ Migration: child table FK references fixed');
+  }
+
+  // Migration 5: fix bookings and ratings which also referenced users_old
+  const bookingsSql = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='bookings'").get()?.sql || '';
+  if (bookingsSql.includes('"users_old"')) {
+    console.log('✅ Migration: fixing bookings and ratings FK references…');
+    db.exec(`
+      BEGIN;
+
+      CREATE TABLE bookings_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        load_id INTEGER NOT NULL REFERENCES loads(id),
+        driver_id INTEGER NOT NULL REFERENCES users(id),
+        shipper_id INTEGER NOT NULL REFERENCES users(id),
+        agreed_price REAL NOT NULL,
+        status TEXT DEFAULT 'confirmed' CHECK (status IN ('confirmed', 'picked_up', 'in_transit', 'delivered', 'disputed', 'cancelled')),
+        booked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        picked_up_at DATETIME,
+        delivered_at DATETIME
+      );
+      INSERT INTO bookings_new SELECT * FROM bookings;
+      DROP TABLE bookings;
+      ALTER TABLE bookings_new RENAME TO bookings;
+
+      CREATE TABLE ratings_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        booking_id INTEGER NOT NULL REFERENCES bookings(id),
+        from_user_id INTEGER NOT NULL REFERENCES users(id),
+        to_user_id INTEGER NOT NULL REFERENCES users(id),
+        score INTEGER NOT NULL CHECK (score BETWEEN 1 AND 5),
+        comment TEXT,
+        rated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      INSERT INTO ratings_new SELECT * FROM ratings;
+      DROP TABLE ratings;
+      ALTER TABLE ratings_new RENAME TO ratings;
+
+      CREATE TABLE tracking_updates_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        booking_id INTEGER NOT NULL REFERENCES bookings(id),
+        lat REAL NOT NULL,
+        lng REAL NOT NULL,
+        status_message TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      INSERT INTO tracking_updates_new SELECT * FROM tracking_updates;
+      DROP TABLE tracking_updates;
+      ALTER TABLE tracking_updates_new RENAME TO tracking_updates;
+
+      COMMIT;
+    `);
+    console.log('✅ Migration: bookings/ratings/tracking_updates FK references fixed');
   }
 }
 

@@ -66,7 +66,7 @@ export default function LoadDetails() {
                     <span className={`badge-${load.status === 'open' ? 'open' : load.status}`}>{load.status}</span>
                   </div>
                 </div>
-                <p className="text-2xl font-black text-navy-900">₹{Number(load.offered_price).toLocaleString('en-IN')}</p>
+                <p className="text-2xl font-black" style={{ color: 'var(--accent)' }}>₹{Number(load.offered_price).toLocaleString('en-IN')}</p>
               </div>
 
               <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl mb-4 border border-slate-100">
@@ -116,10 +116,18 @@ export default function LoadDetails() {
 
             {/* Accept */}
             {load.status === 'open' && (
-              <div className="card text-center">
-                <p className="text-slate-500 text-sm mb-4">Accept this load at the offered price</p>
+              <div className="card text-center" style={{ border: '1.5px solid var(--accent)', background: 'var(--accent-subtle)' }}>
+                <p className="text-xs uppercase tracking-wider font-semibold mb-1" style={{ color: 'var(--accent)' }}>Offered Price</p>
+                <p className="text-3xl font-black mb-1" style={{ color: 'var(--accent)' }}>
+                  ₹{Number(load.offered_price).toLocaleString('en-IN')}
+                </p>
+                <p className="text-xs text-slate-500 mb-4">Accept to confirm this load</p>
                 <button onClick={handleAccept} disabled={booking}
-                  className="btn-primary w-full !py-3.5 flex items-center justify-center gap-2">
+                  className="w-full py-3.5 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-60"
+                  style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text, #0f172a)' }}
+                  onMouseEnter={e => !booking && (e.currentTarget.style.filter = 'brightness(1.08)')}
+                  onMouseLeave={e => (e.currentTarget.style.filter = 'none')}
+                >
                   <CheckCircle size={17} /> {booking ? 'Booking…' : 'Accept Load'}
                 </button>
               </div>

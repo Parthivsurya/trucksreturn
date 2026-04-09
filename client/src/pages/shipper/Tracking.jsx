@@ -85,14 +85,22 @@ export default function Tracking() {
                   <div key={step} className="flex-1 flex flex-col items-center relative">
                     {/* Connector line */}
                     {i < statusSteps.length - 1 && (
-                      <div className={`absolute left-1/2 top-4 w-full h-0.5 -translate-y-1/2
-                        ${i < currentIdx ? 'bg-navy-900' : 'bg-slate-200'}`} />
+                      <div
+                        className="absolute left-1/2 top-4 w-full h-0.5 -translate-y-1/2 transition-colors"
+                        style={{ backgroundColor: i < currentIdx ? 'var(--accent)' : '#e2e8f0' }}
+                      />
                     )}
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold mb-2 relative z-10
-                      ${i <= currentIdx ? 'bg-navy-900 text-white' : 'bg-slate-100 text-slate-400 border border-slate-200'}`}>
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold mb-2 relative z-10"
+                      style={i <= currentIdx
+                        ? { backgroundColor: 'var(--accent)', color: 'var(--accent-text, #0f172a)' }
+                        : { backgroundColor: '#f1f5f9', color: '#94a3b8', border: '1px solid #e2e8f0' }
+                      }
+                    >
                       {i <= currentIdx ? <CheckCircle size={15} /> : i + 1}
                     </div>
-                    <p className={`text-xs text-center capitalize ${i <= currentIdx ? 'text-navy-900 font-medium' : 'text-slate-400'}`}>
+                    <p className={`text-xs text-center capitalize ${i <= currentIdx ? 'font-medium' : 'text-slate-400'}`}
+                      style={i <= currentIdx ? { color: 'var(--accent)' } : {}}>
                       {step.replace('_', ' ')}
                     </p>
                   </div>

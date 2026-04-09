@@ -28,6 +28,6 @@ export function useAdminApi() {
     get:  (url)       => request('GET',    url),
     post: (url, data) => request('POST',   url, data),
     put:  (url, data) => request('PUT',    url, data),
-    del:  (url)       => request('DELETE', url),
+    del:  (url, data) => request('DELETE', url, data),
   };
 }

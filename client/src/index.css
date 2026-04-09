@@ -12,7 +12,7 @@
   body {
     font-family: 'Inter', system-ui, sans-serif;
     background-color: #f8fafc;
-    color: #0B2545;
+    color: #0f172a;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -37,8 +37,12 @@
   }
 
   .btn-amber {
-    @apply px-6 py-3 bg-navy-900 text-white font-semibold rounded-xl
-           hover:bg-navy-800 transition-colors duration-200 active:scale-[0.97];
+    @apply px-6 py-3 font-semibold rounded-xl transition-colors duration-200 active:scale-[0.97];
+    background-color: var(--accent, #f59e0b);
+    color: var(--accent-text, #0f172a);
+  }
+  .btn-amber:hover:not(:disabled) {
+    background-color: var(--accent-dark, #d97706);
   }
 
   .input-field {
@@ -83,6 +87,29 @@
   .section-subtitle {
     @apply text-slate-500 text-sm sm:text-base;
   }
+}
+
+/* ── Accent utility classes (driven by CSS variables set by SettingsContext) ── */
+.bg-accent        { background-color: var(--accent, #f59e0b); }
+.bg-accent-subtle { background-color: var(--accent-subtle, rgba(245,158,11,0.12)); }
+.text-accent      { color: var(--accent, #1976D2); }
+.border-accent    { border-color: var(--accent, #1976D2); }
+
+.btn-accent {
+  @apply px-6 py-3 text-white font-semibold rounded-xl
+         transition-colors duration-200
+         active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed;
+  background-color: var(--accent, #1976D2);
+}
+.btn-accent:hover:not(:disabled) {
+  background-color: var(--accent-dark, #1565c0);
+}
+
+/* Icon box using accent colour */
+.icon-box-accent {
+  @apply w-11 h-11 rounded-xl flex items-center justify-center;
+  background-color: var(--accent, #1976D2);
+  color: #fff;
 }
 
 /* Leaflet overrides for light theme */

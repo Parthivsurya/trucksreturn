@@ -2,55 +2,103 @@ import { useState, useEffect } from 'react';
 import AdminLayout from '../../components/AdminLayout.jsx';
 import { useAdminApi } from '../../hooks/useAdminApi.js';
 import { useSettings } from '../../context/SettingsContext.jsx';
-import { Settings, Palette, Image, Type, Check, Upload } from 'lucide-react';
+import { Settings, Palette, Type, Check, Mail, Eye, EyeOff, Send, ToggleLeft, ToggleRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const PRESETS = [
-  { id: 'navy',     label: 'Navy',    color: '#0B2545' },
-  { id: 'midnight', label: 'Midnight', color: '#1a1a2e' },
-  { id: 'forest',   label: 'Forest',   color: '#1a4731' },
-  { id: 'burgundy', label: 'Burgundy', color: '#7b1c1c' },
-  { id: 'purple',   label: 'Purple',   color: '#3d1a6b' },
-  { id: 'teal',     label: 'Teal',     color: '#0f4c5c' },
-  { id: 'slate',    label: 'Slate',    color: '#2d3748' },
-  { id: 'custom',   label: 'Custom',   color: null },
+  { id: 'freight',  label: 'Freight',  primary: '#0f172a', accent: '#f59e0b' },  // default
+  { id: 'navy',     label: 'Navy',     primary: '#0B2545', accent: '#3b82f6' },
+  { id: 'midnight', label: 'Midnight', primary: '#1a1a2e', accent: '#6366f1' },
+  { id: 'forest',   label: 'Forest',   primary: '#1a4731', accent: '#22c55e' },
+  { id: 'burgundy', label: 'Burgundy', primary: '#7b1c1c', accent: '#f97316' },
+  { id: 'teal',     label: 'Teal',     primary: '#0f4c5c', accent: '#06b6d4' },
+  { id: 'slate',    label: 'Slate',    primary: '#2d3748', accent: '#f59e0b' },
+  { id: 'custom',   label: 'Custom',   primary: null,      accent: null },
 ];
 
 export default function AdminSettings() {
   const api = useAdminApi();
   const { settings, setSettings } = useSettings();
-  const [form, setForm]     = useState({ site_name: '', logo_url: '', primary_color: '#0B2545', theme_preset: 'navy' });
-  const [saving, setSaving] = useState(false);
+  const [form, setForm]         = useState({ site_name: '', logo_url: '', primary_color: '#0f172a', accent_color: '#f59e0b', theme_preset: 'freight', smtp_enabled: '0', smtp_host: '', smtp_port: '587', smtp_secure: '0', smtp_user: '', smtp_pass: '', smtp_from_name: '', smtp_from_email: '', email_on_login: '1', email_on_booking_shipper: '1', email_on_booking_driver: '1', email_on_status_change: '1', email_on_load_status: '1' });
+  const [savingTheme, setSavingTheme] = useState(false);
+  const [savingSmtp,  setSavingSmtp]  = useState(false);
+  const [showPass, setShowPass] = useState(false);
+  const [testTo, setTestTo]     = useState('');
+  const [testing, setTesting]   = useState(false);
 
   useEffect(() => {
     if (settings.site_name !== undefined) {
       setForm({
-        site_name:     settings.site_name     || 'ReturnLoad',
-        logo_url:      settings.logo_url      || '',
-        primary_color: settings.primary_color || '#0B2545',
-        theme_preset:  settings.theme_preset  || 'navy',
+        site_name:       settings.site_name       || 'ReturnLoad',
+        logo_url:        settings.logo_url        || '',
+        primary_color:   settings.primary_color   || '#0f172a',
+        theme_preset:    settings.theme_preset    || 'freight',
+        smtp_enabled:    settings.smtp_enabled    || '0',
+        smtp_host:       settings.smtp_host       || '',
+        smtp_port:       settings.smtp_port       || '587',
+        smtp_secure:     settings.smtp_secure     || '0',
+        smtp_user:       settings.smtp_user       || '',
+        smtp_pass:       settings.smtp_pass       || '',
+        smtp_from_name:          settings.smtp_from_name          || '',
+        smtp_from_email:         settings.smtp_from_email         || '',
+        accent_color:            settings.accent_color            ?? '#1976D2',
+        email_on_login:          settings.email_on_login          ?? '1',
+        email_on_booking_shipper:settings.email_on_booking_shipper ?? '1',
+        email_on_booking_driver: settings.email_on_booking_driver  ?? '1',
+        email_on_status_change:  settings.email_on_status_change  ?? '1',
+        email_on_load_status:    settings.email_on_load_status    ?? '1',
       });
     }
   }, [settings]);
+
+  async function sendTest() {
+    if (!testTo) return toast.error('Enter a recipient email address.');
+    setTesting(true);
+    try {
+      await api.post('/settings/test-email', { to: testTo });
+      toast.success(`Test email sent to ${testTo}`);
+    } catch (err) {
+      toast.error(err.message);
+    }
+    setTesting(false);
+  }
 
   function selectPreset(preset) {
     if (preset.id === 'custom') {
       setForm(f => ({ ...f, theme_preset: 'custom' }));
       return;
     }
-    setForm(f => ({ ...f, theme_preset: preset.id, primary_color: preset.color }));
+    setForm(f => ({ ...f, theme_preset: preset.id, primary_color: preset.primary, accent_color: preset.accent }));
   }
 
-  async function save() {
-    setSaving(true);
+  async function saveTheme() {
+    setSavingTheme(true);
     try {
-      const data = await api.put('/settings', form);
+      const data = await api.put('/settings', {
+        site_name: form.site_name, logo_url: form.logo_url,
+        primary_color: form.primary_color, accent_color: form.accent_color, theme_preset: form.theme_preset,
+      });
       setSettings(data);
-      toast.success('Settings saved');
-    } catch (err) {
-      toast.error(err.message);
-    }
-    setSaving(false);
+      toast.success('Theme saved');
+    } catch (err) { toast.error(err.message); }
+    setSavingTheme(false);
+  }
+
+  async function saveSmtp() {
+    setSavingSmtp(true);
+    try {
+      const data = await api.put('/settings', {
+        smtp_enabled: form.smtp_enabled, smtp_host: form.smtp_host, smtp_port: form.smtp_port,
+        smtp_secure: form.smtp_secure, smtp_user: form.smtp_user, smtp_pass: form.smtp_pass,
+        smtp_from_name: form.smtp_from_name, smtp_from_email: form.smtp_from_email,
+        email_on_login: form.email_on_login, email_on_booking_shipper: form.email_on_booking_shipper,
+        email_on_booking_driver: form.email_on_booking_driver, email_on_status_change: form.email_on_status_change,
+        email_on_load_status: form.email_on_load_status,
+      });
+      setSettings(data);
+      toast.success('Email settings saved');
+    } catch (err) { toast.error(err.message); }
+    setSavingSmtp(false);
   }
 
   const activePreset = form.theme_preset;
@@ -131,96 +179,243 @@ export default function AdminSettings() {
 
           {/* Preset grid */}
           <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 mb-5">
-            {PRESETS.map(p => (
-              <button
-                key={p.id}
-                onClick={() => selectPreset(p)}
-                className="flex flex-col items-center gap-1.5 group"
-                title={p.label}
-              >
-                <div
-                  className="w-10 h-10 rounded-xl border-2 transition-all flex items-center justify-center"
-                  style={{
-                    backgroundColor: p.color || form.primary_color,
-                    borderColor: activePreset === p.id ? '#94a3b8' : 'transparent',
-                    boxShadow: activePreset === p.id ? '0 0 0 2px white, 0 0 0 4px ' + (p.color || form.primary_color) : 'none',
-                  }}
+            {PRESETS.map(p => {
+              const pri = p.primary || form.primary_color;
+              const acc = p.accent  || form.accent_color;
+              const active = activePreset === p.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => selectPreset(p)}
+                  className="flex flex-col items-center gap-1.5 group"
+                  title={p.label}
                 >
-                  {activePreset === p.id && <Check size={14} className="text-white" strokeWidth={3} />}
-                </div>
-                <span className="text-[10px] text-slate-500 group-hover:text-slate-700">{p.label}</span>
-              </button>
-            ))}
+                  <div
+                    className="w-10 h-10 rounded-xl border-2 transition-all overflow-hidden"
+                    style={{
+                      borderColor: active ? '#94a3b8' : 'transparent',
+                      boxShadow: active ? `0 0 0 2px white, 0 0 0 4px ${pri}` : 'none',
+                    }}
+                  >
+                    <div
+                      className="w-full h-full flex items-center justify-center"
+                      style={{ background: `linear-gradient(135deg, ${pri} 50%, ${acc} 50%)` }}
+                    >
+                      {active && <Check size={14} className="text-white drop-shadow" strokeWidth={3} />}
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-slate-500 group-hover:text-slate-700">{p.label}</span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Custom color picker — always visible */}
-          <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-            <label className="text-sm font-medium text-slate-700 whitespace-nowrap">Custom color</label>
-            <div className="flex items-center gap-3 flex-1">
-              <input
-                type="color"
-                value={form.primary_color}
-                onChange={e => setForm(f => ({ ...f, primary_color: e.target.value, theme_preset: 'custom' }))}
-                className="w-10 h-10 rounded-lg border border-slate-200 cursor-pointer p-0.5 bg-white"
-              />
-              <input
-                type="text"
-                value={form.primary_color}
-                onChange={e => {
-                  const v = e.target.value;
-                  setForm(f => ({ ...f, primary_color: v, theme_preset: 'custom' }));
-                }}
-                placeholder="#0B2545"
-                className="input-field !py-2 !w-32 font-mono text-sm"
-                maxLength={7}
-              />
-              <span className="text-xs text-slate-400">hex code</span>
+          {/* Custom color pickers — primary + accent */}
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Custom colors</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Primary */}
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={form.primary_color}
+                  onChange={e => setForm(f => ({ ...f, primary_color: e.target.value, theme_preset: 'custom' }))}
+                  className="w-10 h-10 rounded-lg border border-slate-200 cursor-pointer p-0.5 bg-white shrink-0"
+                />
+                <div className="flex-1">
+                  <p className="text-xs text-slate-500 mb-1">Dark (Primary)</p>
+                  <input
+                    type="text"
+                    value={form.primary_color}
+                    onChange={e => setForm(f => ({ ...f, primary_color: e.target.value, theme_preset: 'custom' }))}
+                    placeholder="#0B2545"
+                    className="input-field !py-1.5 font-mono text-sm"
+                    maxLength={7}
+                  />
+                </div>
+              </div>
+              {/* Accent */}
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={form.accent_color}
+                  onChange={e => setForm(f => ({ ...f, accent_color: e.target.value, theme_preset: 'custom' }))}
+                  className="w-10 h-10 rounded-lg border border-slate-200 cursor-pointer p-0.5 bg-white shrink-0"
+                />
+                <div className="flex-1">
+                  <p className="text-xs text-slate-500 mb-1">Light (Accent)</p>
+                  <input
+                    type="text"
+                    value={form.accent_color}
+                    onChange={e => setForm(f => ({ ...f, accent_color: e.target.value, theme_preset: 'custom' }))}
+                    placeholder="#1976D2"
+                    className="input-field !py-1.5 font-mono text-sm"
+                    maxLength={7}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Live preview strip */}
           <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-            <p className="text-xs text-slate-400 mb-3 uppercase tracking-wider font-medium">Live preview</p>
+            <p className="text-xs text-slate-400 mb-3 uppercase tracking-wider font-medium">Live preview — 3 colour theme</p>
             <div className="flex flex-wrap items-center gap-3">
-              <button
-                className="px-4 py-2 text-white text-sm font-semibold rounded-xl"
-                style={{ backgroundColor: form.primary_color }}
-              >
-                Primary Button
-              </button>
-              <button
-                className="px-4 py-2 text-sm font-semibold rounded-xl border"
-                style={{ color: form.primary_color, borderColor: form.primary_color + '44', backgroundColor: 'white' }}
-              >
-                Secondary
-              </button>
-              <span
-                className="px-3 py-1 text-xs font-semibold rounded-full border"
-                style={{ backgroundColor: form.primary_color + '18', color: form.primary_color, borderColor: form.primary_color + '33' }}
-              >
-                Badge
-              </span>
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: form.primary_color }}
-              >
-                <span className="text-white text-xs font-bold">A</span>
+              <button className="px-4 py-2 text-white text-sm font-semibold rounded-xl" style={{ backgroundColor: form.primary_color }}>Primary</button>
+              <button className="px-4 py-2 text-white text-sm font-semibold rounded-xl" style={{ backgroundColor: form.accent_color }}>Accent</button>
+              <button className="px-4 py-2 text-sm font-semibold rounded-xl border bg-white" style={{ color: form.primary_color, borderColor: form.primary_color + '44' }}>Secondary</button>
+              <span className="px-3 py-1 text-xs font-semibold rounded-full border" style={{ backgroundColor: form.accent_color + '18', color: form.accent_color, borderColor: form.accent_color + '44' }}>Badge</span>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: form.accent_color }}>
+                <span className="text-white text-xs font-bold">✦</span>
+              </div>
+              <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg" style={{ backgroundColor: form.primary_color }}>
+                <span className="text-white text-xs font-medium">Navbar</span>
+                <span className="ml-2 px-2 py-0.5 rounded text-xs text-white font-semibold" style={{ borderBottom: `2px solid ${form.accent_color}` }}>Active</span>
               </div>
             </div>
           </div>
+
+          {/* Theme save */}
+          <div className="mt-5 flex justify-end">
+            <button onClick={saveTheme} disabled={savingTheme} className="btn-primary flex items-center gap-2">
+              <Check size={15} /> {savingTheme ? 'Saving…' : 'Save Theme'}
+            </button>
+          </div>
         </section>
 
-        {/* Save */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-slate-400">Changes apply immediately across the platform</p>
-          <button
-            onClick={save}
-            disabled={saving}
-            className="btn-primary"
-          >
-            {saving ? 'Saving…' : 'Save Settings'}
-          </button>
-        </div>
+        {/* SMTP / Email */}
+        <section className="card mb-6">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                <Mail size={15} className="text-slate-600" />
+              </div>
+              <div>
+                <h2 className="font-bold text-navy-900">Email / SMTP</h2>
+                <p className="text-xs text-slate-400">Login alerts and transaction notifications</p>
+              </div>
+            </div>
+            {/* Enable toggle */}
+            <button
+              type="button"
+              onClick={() => setForm(f => ({ ...f, smtp_enabled: f.smtp_enabled === '1' ? '0' : '1' }))}
+              className="flex items-center gap-2 text-sm font-medium"
+            >
+              {form.smtp_enabled === '1'
+                ? <><ToggleRight size={28} className="text-green-500" /> <span className="text-green-600">Enabled</span></>
+                : <><ToggleLeft  size={28} className="text-slate-400" /> <span className="text-slate-400">Disabled</span></>}
+            </button>
+          </div>
+
+          <div className={form.smtp_enabled !== '1' ? 'opacity-50 pointer-events-none' : ''}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div className="sm:col-span-2 flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">SMTP Host</label>
+                  <input type="text" value={form.smtp_host}
+                    onChange={e => setForm(f => ({ ...f, smtp_host: e.target.value }))}
+                    className="input-field" placeholder="smtp.gmail.com" />
+                </div>
+                <div className="w-28">
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Port</label>
+                  <input type="number" value={form.smtp_port}
+                    onChange={e => setForm(f => ({ ...f, smtp_port: e.target.value }))}
+                    className="input-field" placeholder="587" />
+                </div>
+                <div className="w-24 flex flex-col justify-end pb-1">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" checked={form.smtp_secure === '1'}
+                      onChange={e => setForm(f => ({ ...f, smtp_secure: e.target.checked ? '1' : '0' }))}
+                      className="w-4 h-4 rounded accent-navy-900" />
+                    <span className="text-sm text-slate-700">SSL/TLS</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">SMTP Username</label>
+                <input type="email" value={form.smtp_user}
+                  onChange={e => setForm(f => ({ ...f, smtp_user: e.target.value }))}
+                  className="input-field" placeholder="you@gmail.com" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">SMTP Password</label>
+                <div className="relative">
+                  <input type={showPass ? 'text' : 'password'} value={form.smtp_pass}
+                    onChange={e => setForm(f => ({ ...f, smtp_pass: e.target.value }))}
+                    className="input-field !pr-10" placeholder="App password or SMTP password" />
+                  <button type="button" onClick={() => setShowPass(p => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">From Name</label>
+                <input type="text" value={form.smtp_from_name}
+                  onChange={e => setForm(f => ({ ...f, smtp_from_name: e.target.value }))}
+                  className="input-field" placeholder="ReturnLoad Platform" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">From Email</label>
+                <input type="email" value={form.smtp_from_email}
+                  onChange={e => setForm(f => ({ ...f, smtp_from_email: e.target.value }))}
+                  className="input-field" placeholder="noreply@yourplatform.com" />
+              </div>
+            </div>
+
+            {/* Per-notification toggles */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden mb-4">
+              <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+                <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Notification Triggers</p>
+              </div>
+              {[
+                { key: 'email_on_login',           label: 'Login alerts',          desc: 'Notify users when a new login is detected on their account' },
+                { key: 'email_on_booking_shipper', label: 'Booking — shipper',     desc: 'Notify shipper when a driver books their load' },
+                { key: 'email_on_booking_driver',  label: 'Booking — driver',      desc: 'Send driver a confirmation when they book a load' },
+                { key: 'email_on_status_change',   label: 'Booking status changes',desc: 'Notify both parties on every booking status update' },
+                { key: 'email_on_load_status',     label: 'Load status changes',   desc: 'Notify shipper when admin updates their load status' },
+              ].map(({ key, label, desc }) => (
+                <div key={key} className="flex items-center justify-between px-4 py-3 border-b border-slate-100 last:border-0">
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">{label}</p>
+                    <p className="text-xs text-slate-400">{desc}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, [key]: f[key] === '1' ? '0' : '1' }))}
+                    className="flex items-center gap-1.5 text-sm font-medium shrink-0 ml-4"
+                  >
+                    {form[key] === '1'
+                      ? <><ToggleRight size={24} className="text-green-500" /><span className="text-green-600 text-xs">On</span></>
+                      : <><ToggleLeft  size={24} className="text-slate-400" /><span className="text-slate-400 text-xs">Off</span></>}
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Test email */}
+            <div className="flex gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <input type="email" value={testTo} onChange={e => setTestTo(e.target.value)}
+                className="input-field flex-1 !py-2.5 text-sm" placeholder="Send test email to…" />
+              <button onClick={sendTest} disabled={testing}
+                className="flex items-center gap-2 px-4 py-2.5 bg-navy-900 text-white text-sm font-semibold rounded-xl hover:bg-navy-800 transition-colors disabled:opacity-50">
+                <Send size={14} /> {testing ? 'Sending…' : 'Send Test'}
+              </button>
+            </div>
+            <p className="text-xs text-slate-400 mt-2">
+              For Gmail, use an <strong>App Password</strong> (Google Account → Security → 2-Step Verification → App passwords). Port 587 with SSL/TLS off, or port 465 with SSL/TLS on.
+            </p>
+          </div>
+
+          {/* SMTP save */}
+          <div className="mt-5 flex justify-end">
+            <button onClick={saveSmtp} disabled={savingSmtp} className="btn-primary flex items-center gap-2">
+              <Check size={15} /> {savingSmtp ? 'Saving…' : 'Save Email Settings'}
+            </button>
+          </div>
+        </section>
       </div>
     </AdminLayout>
   );

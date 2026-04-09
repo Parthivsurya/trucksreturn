@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import db from '../db/db.js';
+import { sendLoginEmail } from '../services/email.service.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'smartreturnload_dev_secret';
 
@@ -55,6 +56,9 @@ export function login(req, res) {
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     const { password_hash, ...safeUser } = user;
     res.json({ token, user: safeUser });
+
+    // Fire-and-forget login notification
+    sendLoginEmail(user).catch(() => {});
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

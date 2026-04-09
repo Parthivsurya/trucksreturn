@@ -78,12 +78,12 @@ export default function DriverDashboard() {
 
         {/* Current Route */}
         {availability ? (
-          <div className="card mb-8">
+          <div className="card mb-8" style={{ borderLeft: '3px solid var(--accent)' }}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-base font-bold text-navy-900 flex items-center gap-2">
-                <Navigation size={17} className="text-green-600" /> Active Route
+                <Navigation size={17} style={{ color: 'var(--accent)' }} /> Active Route
               </h2>
-              <span className="badge-open">Active</span>
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ backgroundColor: 'var(--accent-subtle)', color: 'var(--accent)' }}>Active</span>
             </div>
             <div className="flex items-center gap-3 text-sm">
               <div className="flex items-center gap-1 text-green-700">
@@ -112,7 +112,7 @@ export default function DriverDashboard() {
               {matches.length > 0 ? `${matches.length} Matching Loads` : 'Available Loads'}
             </h2>
             {matches.length > 0 && (
-              <Link to="/driver/find-loads" className="text-navy-600 text-sm hover:underline flex items-center gap-1">
+              <Link to="/driver/find-loads" className="text-sm hover:underline flex items-center gap-1 font-medium" style={{ color: 'var(--accent)' }}>
                 View all <ArrowRight size={13} />
               </Link>
             )}

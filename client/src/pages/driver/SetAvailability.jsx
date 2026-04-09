@@ -42,7 +42,7 @@ export default function SetAvailability() {
   if (currentCityData) markers.push({ lat: currentCityData.lat, lng: currentCityData.lng, type: 'truck',    label: `Current: ${currentCityData.name}` });
   if (destCityData)    markers.push({ lat: destCityData.lat,    lng: destCityData.lng,    type: 'delivery', label: `Destination: ${destCityData.name}` });
   if (currentCityData && destCityData) {
-    routes.push({ from: [currentCityData.lat, currentCityData.lng], to: [destCityData.lat, destCityData.lng], color: '#0B2545', dashed: true });
+    routes.push({ from: [currentCityData.lat, currentCityData.lng], to: [destCityData.lat, destCityData.lng], color: '#0f172a', dashed: true });
   }
 
   async function handleSubmit(e) {

@@ -1,15 +1,24 @@
 export default function StatCard({ icon: Icon, label, value, color = 'blue', prefix = '' }) {
-  const iconColors = {
-    blue:   'bg-navy-50 text-navy-900',
-    amber:  'bg-amber-50 text-amber-700',
-    green:  'bg-green-50 text-green-700',
-    red:    'bg-red-50 text-red-600',
-    purple: 'bg-slate-100 text-slate-700',
+  const isAccent = color === 'blue';
+
+  const staticColors = {
+    amber:  { bg: '#fffbeb', icon: '#b45309' },
+    green:  { bg: '#f0fdf4', icon: '#15803d' },
+    red:    { bg: '#fef2f2', icon: '#dc2626' },
+    purple: { bg: '#f1f5f9', icon: '#475569' },
   };
+
+  const sc = !isAccent ? staticColors[color] : null;
 
   return (
     <div className="stat-card">
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${iconColors[color]}`}>
+      <div
+        className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+        style={isAccent
+          ? { backgroundColor: 'var(--accent-subtle, rgba(25,118,210,0.12))', color: 'var(--accent, #1976D2)' }
+          : { backgroundColor: sc?.bg, color: sc?.icon }
+        }
+      >
         <Icon size={20} />
       </div>
       <div>
