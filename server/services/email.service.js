@@ -1,10 +1,10 @@
 import nodemailer from 'nodemailer';
-import db from '../db/db.js';
+import pool from '../db/db.js';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-function getSmtpConfig() {
-  const rows = db.prepare('SELECT key, value FROM settings').all();
+async function getSmtpConfig() {
+  const { rows } = await pool.query('SELECT key, value FROM settings');
   return Object.fromEntries(rows.map(r => [r.key, r.value]));
 }
 
@@ -19,7 +19,7 @@ function createTransporter(cfg) {
 }
 
 export async function sendEmail({ to, subject, html }) {
-  const cfg = getSmtpConfig();
+  const cfg = await getSmtpConfig();
   if (cfg.smtp_enabled !== '1') return;
   if (!cfg.smtp_host || !cfg.smtp_user || !cfg.smtp_pass) return;
 
@@ -33,7 +33,7 @@ export async function sendEmail({ to, subject, html }) {
 }
 
 export async function testEmail(toAddress) {
-  const cfg = getSmtpConfig();
+  const cfg = await getSmtpConfig();
   if (!cfg.smtp_host || !cfg.smtp_user || !cfg.smtp_pass) {
     throw new Error('SMTP not configured. Fill in host, username, and password first.');
   }
@@ -48,14 +48,14 @@ export async function testEmail(toAddress) {
       body: `<p>This is a test email from your <strong>${cfg.site_name || 'ReturnLoad'}</strong> admin panel.</p>
              <p>Your SMTP settings are configured correctly and emails will be delivered to users.</p>`,
       siteName: cfg.site_name || 'ReturnLoad',
-      primaryColor: cfg.primary_color || '#0B2545',
+      primaryColor: cfg.primary_color || '#0f172a',
     }),
   });
 }
 
 // ── Base template ─────────────────────────────────────────────────────────────
 
-function baseTemplate({ title, preview, body, siteName = 'ReturnLoad', primaryColor = '#0B2545', ctaText, ctaUrl }) {
+function baseTemplate({ title, preview, body, siteName = 'ReturnLoad', primaryColor = '#0f172a', ctaText, ctaUrl }) {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -112,15 +112,36 @@ function statusBadge(status) {
 
 // ── Emails ────────────────────────────────────────────────────────────────────
 
+export async function sendOtpEmail({ email, otp, siteName: siteOverride }) {
+  const cfg = await getSmtpConfig();
+  const site = siteOverride || cfg.site_name || 'ReturnLoad';
+  await sendEmail({
+    to: email,
+    subject: `${otp} is your ${site} verification code`,
+    html: baseTemplate({
+      title: 'Verify your email',
+      body: `
+        <p class="text">You're one step away from joining <strong>${site}</strong>.</p>
+        <p class="text">Enter this code to verify your email address:</p>
+        <div style="text-align:center;margin:28px 0">
+          <span style="display:inline-block;font-size:40px;font-weight:900;letter-spacing:12px;color:#0f172a;background:#f8fafc;padding:18px 32px;border-radius:16px;border:2px dashed #e2e8f0">${otp}</span>
+        </div>
+        <p class="text" style="font-size:13px;color:#94a3b8;text-align:center">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
+      `,
+      siteName: site,
+      primaryColor: cfg.primary_color || '#0f172a',
+    }),
+  });
+}
+
 export async function sendLoginEmail(user) {
-  const cfg = getSmtpConfig();
+  const cfg = await getSmtpConfig();
   if (cfg.email_on_login !== '1') return;
   await sendEmail({
     to: user.email,
     subject: `New login to your ${cfg.site_name || 'ReturnLoad'} account`,
     html: baseTemplate({
       title: 'Login Notification',
-      preview: 'A new login was detected on your account.',
       body: `
         <p class="text">Hi <strong>${user.name}</strong>,</p>
         <p class="text">A new login was detected on your <strong>${cfg.site_name || 'ReturnLoad'}</strong> account.</p>
@@ -132,15 +153,15 @@ export async function sendLoginEmail(user) {
         <p class="text" style="font-size:13px;color:#94a3b8">If this wasn't you, please contact the platform administrator immediately.</p>
       `,
       siteName: cfg.site_name || 'ReturnLoad',
-      primaryColor: cfg.primary_color || '#0B2545',
+      primaryColor: cfg.primary_color || '#0f172a',
     }),
   });
 }
 
 export async function sendBookingCreatedToShipper({ booking, load, driver, truck }) {
-  const cfg = getSmtpConfig();
+  const cfg = await getSmtpConfig();
   if (cfg.email_on_booking_shipper !== '1') return;
-  const shipper = db.prepare('SELECT name, email FROM users WHERE id = ?').get(load.user_id);
+  const { rows: [shipper] } = await pool.query('SELECT name, email FROM users WHERE id = $1', [load.user_id]);
   if (!shipper?.email) return;
 
   await sendEmail({
@@ -162,13 +183,13 @@ export async function sendBookingCreatedToShipper({ booking, load, driver, truck
         <p class="text">The driver will contact you to coordinate pickup. You can track the delivery from your dashboard.</p>
       `,
       siteName: cfg.site_name || 'ReturnLoad',
-      primaryColor: cfg.primary_color || '#0B2545',
+      primaryColor: cfg.primary_color || '#0f172a',
     }),
   });
 }
 
 export async function sendBookingCreatedToDriver({ booking, load, driver }) {
-  const cfg = getSmtpConfig();
+  const cfg = await getSmtpConfig();
   if (cfg.email_on_booking_driver !== '1') return;
   await sendEmail({
     to: driver.email,
@@ -189,20 +210,20 @@ export async function sendBookingCreatedToDriver({ booking, load, driver }) {
         <p class="text">Please proceed to the pickup location and update your status when you collect the goods.</p>
       `,
       siteName: cfg.site_name || 'ReturnLoad',
-      primaryColor: cfg.primary_color || '#0B2545',
+      primaryColor: cfg.primary_color || '#0f172a',
     }),
   });
 }
 
 export async function sendBookingStatusUpdate({ booking, load, newStatus, toUser, role }) {
-  const cfg = getSmtpConfig();
+  const cfg = await getSmtpConfig();
   if (cfg.email_on_status_change !== '1') return;
   const statusMessages = {
-    picked_up:  { title: 'Goods Picked Up', msg: 'The driver has picked up the goods and is heading to the delivery location.' },
-    in_transit: { title: 'In Transit', msg: 'Your shipment is currently in transit.' },
+    picked_up:  { title: 'Goods Picked Up',        msg: 'The driver has picked up the goods and is heading to the delivery location.' },
+    in_transit: { title: 'In Transit',              msg: 'Your shipment is currently in transit.' },
     delivered:  { title: 'Delivered Successfully!', msg: 'The goods have been delivered to the destination. Please verify and rate the experience.' },
-    cancelled:  { title: 'Booking Cancelled', msg: 'This booking has been cancelled.' },
-    disputed:   { title: 'Dispute Raised', msg: 'A dispute has been raised on this booking. The platform admin will review it.' },
+    cancelled:  { title: 'Booking Cancelled',       msg: 'This booking has been cancelled.' },
+    disputed:   { title: 'Dispute Raised',          msg: 'A dispute has been raised on this booking. The platform admin will review it.' },
   };
 
   const info = statusMessages[newStatus] || { title: `Status: ${newStatus.replace('_', ' ')}`, msg: 'Your booking status has been updated.' };
@@ -225,13 +246,46 @@ export async function sendBookingStatusUpdate({ booking, load, newStatus, toUser
         ${newStatus === 'delivered' ? `<p class="text">Thank you for using ${cfg.site_name || 'ReturnLoad'}! Don't forget to rate your experience.</p>` : ''}
       `,
       siteName: cfg.site_name || 'ReturnLoad',
-      primaryColor: cfg.primary_color || '#0B2545',
+      primaryColor: cfg.primary_color || '#0f172a',
+    }),
+  });
+}
+
+export async function sendDriverConnectRequest({ driver, shipper, load }) {
+  const cfg = await getSmtpConfig();
+  await sendEmail({
+    to: driver.email,
+    subject: `A shipper wants you for their load — ${load.cargo_type} (${load.pickup_city} → ${load.delivery_city})`,
+    html: baseTemplate({
+      title: 'Load Request from a Shipper',
+      body: `
+        <p class="text">Hi <strong>${driver.name}</strong>,</p>
+        <p class="text">
+          <strong>${shipper.name}</strong> has reviewed your route and would like you to carry their load.
+          Here are the details:
+        </p>
+        <div class="info-box">
+          <div class="info-row"><span class="info-label">Cargo</span><span class="info-value">${load.cargo_type} · ${load.weight_tons}t</span></div>
+          <div class="info-row"><span class="info-label">Pickup</span><span class="info-value">${load.pickup_city}</span></div>
+          <div class="info-row"><span class="info-label">Delivery</span><span class="info-value">${load.delivery_city}</span></div>
+          <div class="info-row"><span class="info-label">Offered Price</span><span class="info-value">₹${Number(load.offered_price).toLocaleString('en-IN')}</span></div>
+          ${load.timeline ? `<div class="info-row"><span class="info-label">Timeline</span><span class="info-value">${load.timeline}</span></div>` : ''}
+          <div class="info-row"><span class="info-label">Shipper</span><span class="info-value">${shipper.name}</span></div>
+          ${shipper.phone ? `<div class="info-row"><span class="info-label">Contact</span><span class="info-value">${shipper.phone}</span></div>` : ''}
+        </div>
+        <p class="text">
+          Log in to <strong>${cfg.site_name || 'ReturnLoad'}</strong>, find this load in the Load Finder,
+          and accept it to confirm the booking.
+        </p>
+      `,
+      siteName: cfg.site_name || 'ReturnLoad',
+      primaryColor: cfg.primary_color || '#0f172a',
     }),
   });
 }
 
 export async function sendLoadStatusUpdate({ load, newStatus, shipper }) {
-  const cfg = getSmtpConfig();
+  const cfg = await getSmtpConfig();
   if (cfg.email_on_load_status !== '1') return;
   await sendEmail({
     to: shipper.email,
@@ -249,7 +303,7 @@ export async function sendLoadStatusUpdate({ load, newStatus, shipper }) {
         </div>
       `,
       siteName: cfg.site_name || 'ReturnLoad',
-      primaryColor: cfg.primary_color || '#0B2545',
+      primaryColor: cfg.primary_color || '#0f172a',
     }),
   });
 }

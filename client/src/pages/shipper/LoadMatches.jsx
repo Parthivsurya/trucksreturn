@@ -1,15 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi.js';
+import { useSettings } from '../../context/SettingsContext.jsx';
 import RatingStars from '../../components/RatingStars.jsx';
-import { ArrowLeft, Truck, MapPin, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Truck, MapPin, ArrowRight, Send, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function LoadMatches() {
   const { id } = useParams();
   const api = useApi();
-  const [drivers, setDrivers] = useState([]);
-  const [load, setLoad] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { settings } = useSettings();
+  const primary = settings.primary_color || '#0f172a';
+  const accent  = settings.accent_color  || '#f59e0b';
+
+  const [drivers, setDrivers]     = useState([]);
+  const [load, setLoad]           = useState(null);
+  const [loading, setLoading]     = useState(true);
+  const [confirm, setConfirm]     = useState(null);   // driver object to confirm
+  const [sending, setSending]     = useState(false);
 
   useEffect(() => { fetchMatches(); }, [id]);
 
@@ -20,6 +28,19 @@ export default function LoadMatches() {
       setLoad(res.load);
     } catch (err) {}
     setLoading(false);
+  }
+
+  async function handleConnect() {
+    if (!confirm) return;
+    setSending(true);
+    try {
+      const res = await api.post(`/loads/${id}/connect-driver`, { driver_id: confirm.user_id });
+      toast.success(res.message || `Request sent to ${confirm.driver_name}!`);
+      setConfirm(null);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to send request');
+    }
+    setSending(false);
   }
 
   return (
@@ -46,11 +67,11 @@ export default function LoadMatches() {
         ) : drivers.length > 0 ? (
           <div className="space-y-4">
             {drivers.map(d => (
-              <div key={d.id} className="card-hover">
+              <div key={d.id} className="card">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-navy-50 border border-navy-200 flex items-center justify-center">
-                      <Truck size={20} className="text-navy-900" />
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: primary }}>
+                      <Truck size={20} style={{ color: accent }} />
                     </div>
                     <div>
                       <p className="text-navy-900 font-semibold">{d.driver_name}</p>
@@ -60,9 +81,20 @@ export default function LoadMatches() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-right text-sm">
-                    {d.truck_type     && <p className="text-slate-600">{d.truck_type}</p>}
-                    {d.capacity_tons  && <p className="text-slate-400 text-xs">{d.capacity_tons}t capacity</p>}
+                  <div className="flex items-center gap-3">
+                    <div className="text-right text-sm">
+                      {d.truck_type    && <p className="text-slate-600">{d.truck_type}</p>}
+                      {d.capacity_tons && <p className="text-slate-400 text-xs">{d.capacity_tons}t capacity</p>}
+                    </div>
+                    <button
+                      onClick={() => setConfirm(d)}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-bold transition-all active:scale-95"
+                      style={{ backgroundColor: accent, color: primary }}
+                      onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.08)'}
+                      onMouseLeave={e => e.currentTarget.style.filter = 'none'}
+                    >
+                      <Send size={13} /> Connect
+                    </button>
                   </div>
                 </div>
                 <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-4 text-xs text-slate-400">
@@ -79,6 +111,54 @@ export default function LoadMatches() {
           </div>
         )}
       </div>
+
+      {/* Confirmation modal */}
+      {confirm && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setConfirm(null)}>
+          <div
+            className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl border border-slate-200 animate-slide-up"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${accent}18` }}>
+                <Send size={18} style={{ color: accent }} />
+              </div>
+              <button onClick={() => setConfirm(null)} className="text-slate-400 hover:text-slate-600">
+                <X size={18} />
+              </button>
+            </div>
+
+            <h3 className="text-lg font-black text-navy-900 mb-1">Send Load Request?</h3>
+            <p className="text-sm text-slate-500 mb-4">
+              This will email <span className="font-semibold text-navy-900">{confirm.driver_name}</span> with
+              your load details and ask them to accept it.
+            </p>
+
+            <div className="p-3.5 rounded-xl mb-5 text-sm space-y-1" style={{ backgroundColor: `${accent}0d`, border: `1px solid ${accent}25` }}>
+              <p className="text-slate-600"><span className="font-medium" style={{ color: primary }}>Load:</span> {load?.cargo_type}</p>
+              <p className="text-slate-600"><span className="font-medium" style={{ color: primary }}>Route:</span> {load?.pickup_city} → {load?.delivery_city}</p>
+              <p className="text-slate-600"><span className="font-medium" style={{ color: primary }}>Price:</span> ₹{Number(load?.offered_price).toLocaleString('en-IN')}</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConnect}
+                disabled={sending}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
+                style={{ backgroundColor: accent, color: primary }}
+              >
+                <Send size={14} /> {sending ? 'Sending…' : 'Yes, Send'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

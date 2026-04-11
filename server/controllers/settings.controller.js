@@ -1,4 +1,4 @@
-import db from '../db/db.js';
+import pool from '../db/db.js';
 import { testEmail as sendTestEmail } from '../services/email.service.js';
 
 const ALLOWED_KEYS = [
@@ -9,23 +9,32 @@ const ALLOWED_KEYS = [
   'email_on_status_change', 'email_on_load_status',
 ];
 
-export function getSettings(req, res) {
-  const rows = db.prepare('SELECT key, value FROM settings').all();
-  const settings = Object.fromEntries(rows.map(r => [r.key, r.value]));
-  res.json(settings);
+export async function getSettings(req, res) {
+  try {
+    const { rows } = await pool.query('SELECT key, value FROM settings');
+    res.json(Object.fromEntries(rows.map(r => [r.key, r.value])));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 }
 
-export function updateSettings(req, res) {
-  const updates = req.body;
-  const stmt = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
-  const run = db.transaction(() => {
-    for (const [key, value] of Object.entries(updates)) {
-      if (ALLOWED_KEYS.includes(key)) stmt.run(key, String(value));
+export async function updateSettings(req, res) {
+  try {
+    const updates = req.body;
+    const entries = Object.entries(updates).filter(([key]) => ALLOWED_KEYS.includes(key));
+
+    for (const [key, value] of entries) {
+      await pool.query(
+        'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
+        [key, String(value)]
+      );
     }
-  });
-  run();
-  const rows = db.prepare('SELECT key, value FROM settings').all();
-  res.json(Object.fromEntries(rows.map(r => [r.key, r.value])));
+
+    const { rows } = await pool.query('SELECT key, value FROM settings');
+    res.json(Object.fromEntries(rows.map(r => [r.key, r.value])));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 }
 
 export async function testEmailEndpoint(req, res) {

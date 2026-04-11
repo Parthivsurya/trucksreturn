@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeDatabase, seedDatabase } from './db/db.js';
@@ -16,16 +17,26 @@ import settingsRoutes from './routes/settings.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const clientDistPath = path.resolve(__dirname, '../client/dist');
+const clientIndexPath = path.join(clientDistPath, 'index.html');
+const hasClientBuild = fs.existsSync(clientIndexPath);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const isProd = process.env.NODE_ENV === 'production';
+
+// Trust nginx + Cloudflare so rate limiters see real client IPs
+app.set('trust proxy', 1);
 
 // Middleware
 app.use(helmet({ crossOriginResourcePolicy: false }));
-app.use(cors());
-app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGIN || 'http://localhost:5173',
+  credentials: true,
+}));
+app.use(morgan(isProd ? 'combined' : 'dev'));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Static files for uploaded documents
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -44,18 +55,36 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Error handler
+if (hasClientBuild) {
+  app.use(express.static(clientDistPath));
+
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+      return next();
+    }
+
+    return res.sendFile(clientIndexPath);
+  });
+}
+
+// Error handler — never leak internals to clients in production
 app.use((err, req, res, next) => {
-  console.error('❌ Error:', err.message);
+  console.error('Error:', err);
   res.status(err.status || 500).json({
-    error: err.message || 'Internal server error',
+    error: isProd ? 'Internal server error' : (err.message || 'Internal server error'),
   });
 });
 
-// Initialize
-initializeDatabase();
-seedDatabase();
-
-app.listen(PORT, () => {
-  console.log(`🚛 Smart Return Load API running on http://localhost:${PORT}`);
-});
+// Initialize — must be sequential: schema first, then seed
+(async () => {
+  await initializeDatabase();
+  await seedDatabase();
+  app.listen(PORT, () => {
+    console.log(`🚛 Smart Return Load server running on http://localhost:${PORT}`);
+    if (hasClientBuild) {
+      console.log(`🌐 Serving frontend from ${clientDistPath}`);
+    } else {
+      console.log('ℹ️ Frontend build not found. Run "cd ../client && npm run build" to serve the web app from Express.');
+    }
+  });
+})();

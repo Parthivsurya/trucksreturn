@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSettings } from '../context/SettingsContext.jsx';
-import { Truck, Package, Mail, Lock, User, Phone, Eye, EyeOff, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
+import { useApi } from '../hooks/useApi.js';
+import { Truck, Package, Mail, Lock, User, Phone, Eye, EyeOff, ArrowRight, ArrowLeft, CheckCircle, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Register() {
   const { register } = useAuth();
-  const { settings } = useSettings();
-  const navigate     = useNavigate();
+  const { settings }  = useSettings();
+  const api           = useApi();
+  const navigate      = useNavigate();
 
   const primary  = settings.primary_color || '#0f172a';
   const accent   = settings.accent_color  || '#f59e0b';
@@ -18,14 +20,34 @@ export default function Register() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading]  = useState(false);
   const [form, setForm]        = useState({ name: '', email: '', phone: '', password: '', role: 'driver' });
+  const [otp, setOtp]          = useState(['', '', '', '', '', '']);
+  const otpRefs                = useRef([]);
 
   function update(field, value) { setForm(prev => ({ ...prev, [field]: value })); }
 
-  async function handleSubmit(e) {
+  // Step 2 → send OTP and advance to step 3
+  async function handleSendOtp(e) {
     e.preventDefault();
     setLoading(true);
     try {
-      const data = await register(form);
+      await api.post('/auth/send-otp', { email: form.email });
+      toast.success(`OTP sent to ${form.email}`);
+      setStep(3);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to send OTP');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Step 3 → verify OTP and register
+  async function handleSubmit(e) {
+    e.preventDefault();
+    const otpValue = otp.join('');
+    if (otpValue.length < 6) { toast.error('Enter all 6 digits'); return; }
+    setLoading(true);
+    try {
+      const data = await register({ ...form, otp: otpValue });
       toast.success(`Welcome, ${data.user.name}! Account created.`);
       navigate(data.user.role === 'driver' ? '/driver' : '/shipper');
     } catch (err) {
@@ -33,6 +55,30 @@ export default function Register() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleOtpChange(index, value) {
+    if (!/^\d*$/.test(value)) return;
+    const next = [...otp];
+    next[index] = value.slice(-1);
+    setOtp(next);
+    if (value && index < 5) otpRefs.current[index + 1]?.focus();
+  }
+
+  function handleOtpKeyDown(index, e) {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  }
+
+  function handleOtpPaste(e) {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!pasted) return;
+    const next = [...otp];
+    pasted.split('').forEach((ch, i) => { next[i] = ch; });
+    setOtp(next);
+    otpRefs.current[Math.min(pasted.length, 5)]?.focus();
   }
 
   return (
@@ -48,7 +94,6 @@ export default function Register() {
           style={{ background: `radial-gradient(ellipse at 20% 80%, ${accent}25 0%, transparent 55%)` }}
         />
 
-        {/* Message */}
         <div className="relative">
           <h2 className="text-3xl xl:text-4xl font-black text-white leading-tight mb-4">
             Join India's<br />
@@ -83,9 +128,9 @@ export default function Register() {
             <span className="font-bold text-navy-900">{siteName}</span>
           </div>
 
-          {/* Step indicator */}
+          {/* Step indicator — 3 bars */}
           <div className="flex items-center gap-2 mb-6">
-            {[1, 2].map(n => (
+            {[1, 2, 3].map(n => (
               <div
                 key={n}
                 className="h-1.5 rounded-full flex-1 transition-all duration-300"
@@ -129,7 +174,6 @@ export default function Register() {
                 })}
               </div>
 
-              {/* Trust bar */}
               <div className="grid grid-cols-3 gap-3 mb-6">
                 {[
                   { value: '10M+', label: 'Truck operators' },
@@ -173,7 +217,7 @@ export default function Register() {
                 </span>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSendOtp} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1.5">Full Name</label>
@@ -223,13 +267,90 @@ export default function Register() {
                   onMouseEnter={e => !loading && (e.currentTarget.style.filter = 'brightness(1.08)')}
                   onMouseLeave={e => (e.currentTarget.style.filter = 'none')}
                 >
-                  {loading ? 'Creating Account…' : <><span>Create Account</span><ArrowRight size={17} /></>}
+                  {loading ? 'Sending OTP…' : <><span>Continue</span><ArrowRight size={17} /></>}
                 </button>
               </form>
 
               <p className="text-center text-xs text-slate-400 mt-4">
                 Already have an account?{' '}
                 <Link to="/login" className="font-bold hover:underline" style={{ color: accent }}>Sign in</Link>
+              </p>
+            </div>
+          )}
+
+          {/* Step 3 — OTP verification */}
+          {step === 3 && (
+            <div className="animate-fade-in">
+              <button
+                type="button" onClick={() => setStep(2)}
+                className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700 mb-5"
+              >
+                <ArrowLeft size={13} /> Back
+              </button>
+
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${accent}18` }}>
+                  <ShieldCheck size={20} style={{ color: accent }} />
+                </div>
+                <h1 className="text-2xl font-black text-navy-900">Verify your email</h1>
+              </div>
+              <p className="text-slate-500 text-sm mb-8">
+                We sent a 6-digit code to <span className="font-semibold text-navy-900">{form.email}</span>. Enter it below to continue.
+              </p>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* 6-box OTP input */}
+                <div className="flex gap-3 justify-center" onPaste={handleOtpPaste}>
+                  {otp.map((digit, i) => (
+                    <input
+                      key={i}
+                      ref={el => otpRefs.current[i] = el}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={e => handleOtpChange(i, e.target.value)}
+                      onKeyDown={e => handleOtpKeyDown(i, e)}
+                      className="w-12 h-14 text-center text-xl font-black rounded-xl border-2 outline-none transition-all"
+                      style={{
+                        borderColor: digit ? accent : '#e2e8f0',
+                        backgroundColor: digit ? `${accent}0d` : '#f8fafc',
+                        color: primary,
+                      }}
+                      onFocus={e => e.target.style.borderColor = accent}
+                      onBlur={e => e.target.style.borderColor = digit ? accent : '#e2e8f0'}
+                    />
+                  ))}
+                </div>
+
+                <button type="submit" disabled={loading}
+                  className="w-full py-3.5 rounded-xl font-bold text-base transition-all duration-150 active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
+                  style={{ backgroundColor: accent, color: primary }}
+                  onMouseEnter={e => !loading && (e.currentTarget.style.filter = 'brightness(1.08)')}
+                  onMouseLeave={e => (e.currentTarget.style.filter = 'none')}
+                >
+                  {loading ? 'Creating Account…' : <><span>Verify & Create Account</span><ArrowRight size={17} /></>}
+                </button>
+              </form>
+
+              <p className="text-center text-xs text-slate-400 mt-5">
+                Didn't receive it?{' '}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await api.post('/auth/send-otp', { email: form.email });
+                      toast.success('New OTP sent!');
+                      setOtp(['', '', '', '', '', '']);
+                    } catch (err) {
+                      toast.error(err.response?.data?.error || 'Failed to resend');
+                    }
+                  }}
+                  className="font-bold hover:underline"
+                  style={{ color: accent }}
+                >
+                  Resend OTP
+                </button>
               </p>
             </div>
           )}

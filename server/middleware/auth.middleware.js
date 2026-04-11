@@ -1,9 +1,12 @@
 import jwt from 'jsonwebtoken';
-import db from '../db/db.js';
+import pool from '../db/db.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'smartreturnload_dev_secret';
+if (!process.env.JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
-export function authenticate(req, res, next) {
+export async function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Access denied. No token provided.' });
@@ -13,8 +16,7 @@ export function authenticate(req, res, next) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    // Check if user is still active
-    const user = db.prepare('SELECT is_active FROM users WHERE id = ?').get(decoded.id);
+    const { rows: [user] } = await pool.query('SELECT is_active FROM users WHERE id = $1', [decoded.id]);
     if (!user || user.is_active === 0) {
       return res.status(403).json({ error: 'Account suspended. Contact admin.' });
     }
