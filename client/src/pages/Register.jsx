@@ -21,20 +21,29 @@ export default function Register() {
   const [loading, setLoading]  = useState(false);
   const [form, setForm]        = useState({ name: '', email: '', phone: '', password: '', role: 'driver' });
   const [otp, setOtp]          = useState(['', '', '', '', '', '']);
+  const [emailError, setEmailError] = useState('');
   const otpRefs                = useRef([]);
 
-  function update(field, value) { setForm(prev => ({ ...prev, [field]: value })); }
+  function update(field, value) {
+    if (field === 'email') setEmailError('');
+    setForm(prev => ({ ...prev, [field]: value }));
+  }
 
   // Step 2 → send OTP and advance to step 3
   async function handleSendOtp(e) {
     e.preventDefault();
+    setEmailError('');
     setLoading(true);
     try {
       await api.post('/auth/send-otp', { email: form.email });
       toast.success(`OTP sent to ${form.email}`);
       setStep(3);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to send OTP');
+      if (err.message?.toLowerCase().includes('already registered')) {
+        setEmailError(err.message);
+      } else {
+        toast.error(err.message || 'Failed to send OTP');
+      }
     } finally {
       setLoading(false);
     }
@@ -51,7 +60,7 @@ export default function Register() {
       toast.success(`Welcome, ${data.user.name}! Account created.`);
       navigate(data.user.role === 'driver' ? '/driver' : '/shipper');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Registration failed');
+      toast.error(err.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -243,8 +252,15 @@ export default function Register() {
                   <div className="relative">
                     <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input type="email" required value={form.email} onChange={e => update('email', e.target.value)}
-                      className="input-field !pl-10" placeholder="you@example.com" />
+                      className={`input-field !pl-10 ${emailError ? 'border-red-400 focus:border-red-400' : ''}`}
+                      placeholder="you@example.com" />
                   </div>
+                  {emailError && (
+                    <span className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                      {emailError}{' '}
+                      <Link to="/login" className="font-semibold underline" style={{ color: accent }}>Login here</Link>
+                    </span>
+                  )}
                 </div>
 
                 <div>
@@ -343,7 +359,7 @@ export default function Register() {
                       toast.success('New OTP sent!');
                       setOtp(['', '', '', '', '', '']);
                     } catch (err) {
-                      toast.error(err.response?.data?.error || 'Failed to resend');
+                      toast.error(err.message || 'Failed to resend');
                     }
                   }}
                   className="font-bold hover:underline"

@@ -112,6 +112,20 @@ CREATE TABLE IF NOT EXISTS otp_tokens (
   expires_at TIMESTAMPTZ NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id         SERIAL PRIMARY KEY,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key        TEXT PRIMARY KEY,
+  hits       INTEGER NOT NULL DEFAULT 1,
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_loads_status        ON loads(status);
 CREATE INDEX IF NOT EXISTS idx_loads_pickup         ON loads(pickup_lat, pickup_lng);
@@ -120,4 +134,7 @@ CREATE INDEX IF NOT EXISTS idx_availability_location ON driver_availability(curr
 CREATE INDEX IF NOT EXISTS idx_bookings_driver      ON bookings(driver_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_shipper     ON bookings(shipper_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_status      ON bookings(status);
-CREATE INDEX IF NOT EXISTS idx_users_role           ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_role             ON users(role);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_hash    ON refresh_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user    ON refresh_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_rate_limits_expires    ON rate_limits(expires_at);

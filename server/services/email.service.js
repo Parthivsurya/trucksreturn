@@ -114,8 +114,17 @@ function statusBadge(status) {
 
 export async function sendOtpEmail({ email, otp, siteName: siteOverride }) {
   const cfg = await getSmtpConfig();
+
+  if (cfg.smtp_enabled !== '1' || !cfg.smtp_host || !cfg.smtp_user || !cfg.smtp_pass) {
+    throw new Error('Email service is not configured. Please contact the administrator.');
+  }
+
   const site = siteOverride || cfg.site_name || 'ReturnLoad';
-  await sendEmail({
+  const from = `"${cfg.smtp_from_name || site}" <${cfg.smtp_from_email || cfg.smtp_user}>`;
+
+  // Throws on SMTP failure — caller must handle
+  await createTransporter(cfg).sendMail({
+    from,
     to: email,
     subject: `${otp} is your ${site} verification code`,
     html: baseTemplate({
@@ -132,6 +141,7 @@ export async function sendOtpEmail({ email, otp, siteName: siteOverride }) {
       primaryColor: cfg.primary_color || '#0f172a',
     }),
   });
+  console.log(`📧 OTP email sent to ${email}`);
 }
 
 export async function sendLoginEmail(user) {

@@ -38,7 +38,7 @@ JWT tokens are stored in `localStorage` and sent as `Authorization: Bearer <toke
 4. Scores matches: pickup distance (30%), detour % (40%), offered price (30%)
 
 ### Database
-SQLite with WAL mode, initialized in `server/db/db.js` from `server/db/schema.sql`. Demo data in `server/db/seed.sql`. The database file is at `server/db/database.sqlite`. Foreign keys are enforced; indexes exist on loads status, coordinates, availability status, and booking relationships.
+PostgreSQL, connected via `pg` (node-postgres) Pool in `server/db/db.js` using the `DATABASE_URL` environment variable. Schema is in `server/db/schema.sql`; demo data in `server/db/seed.sql`. Indexes exist on loads status, coordinates, availability status, and booking relationships.
 
 Key tables: `users`, `trucks`, `driver_availability`, `loads`, `bookings`, `ratings`, `tracking_updates`, `documents`.
 
@@ -62,5 +62,5 @@ Server requires `server/.env`:
 ```
 PORT=3001
 JWT_SECRET=smartreturnload_jwt_secret_change_me
-DB_PATH=./db/database.sqlite
+DATABASE_URL=postgresql://user:password@host:5432/dbname
 ```
