@@ -66,6 +66,27 @@ export default function DriverDashboard() {
           </div>
         )}
 
+        {/* Truck Details */}
+        {user?.truck && (
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 mb-6 text-sm text-slate-600">
+            <span className="flex items-center gap-1.5 font-semibold text-navy-900">
+              <Truck size={14} style={{ color: 'var(--accent)' }} />
+              {user.truck.truck_type}
+            </span>
+            <span>{user.truck.capacity_tons} tons</span>
+            {user.truck.registration_number && <span>{user.truck.registration_number}</span>}
+            {user.truck.home_state          && <span>{user.truck.home_state}</span>}
+            {user.truck.permit_number       && <span>Permit: {user.truck.permit_number}</span>}
+            {user.truck.insurance_expiry && (
+              <span className={new Date(user.truck.insurance_expiry) < new Date() ? 'text-red-500 font-semibold' : ''}>
+                Insurance: {new Date(user.truck.insurance_expiry).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                {new Date(user.truck.insurance_expiry) < new Date() && ' (Expired)'}
+              </span>
+            )}
+            <Link to="/driver/truck" className="text-xs hover:underline ml-1" style={{ color: 'var(--accent)' }}>Edit</Link>
+          </div>
+        )}
+
         {/* Stats */}
         {stats && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

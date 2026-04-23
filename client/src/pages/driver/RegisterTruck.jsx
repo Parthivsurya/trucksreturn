@@ -10,11 +10,16 @@ const HOME_STATES = ['Maharashtra', 'Delhi', 'Karnataka', 'Tamil Nadu', 'Gujarat
 
 export default function RegisterTruck() {
   const api = useApi();
-  const { fetchUser } = useAuth();
+  const { user, fetchUser } = useAuth();
   const navigate = useNavigate();
+  const isEditing = !!user?.truck;
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    truck_type: '', capacity_tons: '', permit_number: '', home_state: '', registration_number: '',
+    truck_type: user?.truck?.truck_type || '',
+    capacity_tons: user?.truck?.capacity_tons ?? '',
+    permit_number: user?.truck?.permit_number || '',
+    home_state: user?.truck?.home_state || '',
+    registration_number: user?.truck?.registration_number || '',
   });
 
   function update(field, value) {
@@ -27,7 +32,7 @@ export default function RegisterTruck() {
     try {
       await api.post('/drivers/truck', { ...form, capacity_tons: parseFloat(form.capacity_tons) });
       await fetchUser();
-      toast.success('Truck registered successfully!');
+      toast.success(isEditing ? 'Truck details updated!' : 'Truck registered successfully!');
       navigate('/driver');
     } catch (err) {
       toast.error(err.response?.data?.error || err.message || 'Failed to register truck');
@@ -43,8 +48,8 @@ export default function RegisterTruck() {
           <div className="w-14 h-14 rounded-2xl bg-navy-900 flex items-center justify-center mx-auto mb-4">
             <Truck size={26} className="text-white" />
           </div>
-          <h1 className="text-3xl font-black text-navy-900">Register Your Truck</h1>
-          <p className="text-slate-500 text-sm mt-2">Register a truck before accepting loads</p>
+          <h1 className="text-3xl font-black text-navy-900">{isEditing ? 'Edit Truck Details' : 'Register Your Truck'}</h1>
+          <p className="text-slate-500 text-sm mt-2">{isEditing ? 'Update your truck information below' : 'Register a truck before accepting loads'}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="card space-y-5">
@@ -98,7 +103,7 @@ export default function RegisterTruck() {
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary w-full !py-3.5 mt-2">
-            {loading ? 'Registering…' : 'Register Truck'}
+            {loading ? (isEditing ? 'Saving…' : 'Registering…') : (isEditing ? 'Save Changes' : 'Register Truck')}
           </button>
         </form>
       </div>

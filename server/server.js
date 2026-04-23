@@ -21,10 +21,37 @@ const __dirname  = path.dirname(__filename);
 const clientDistPath  = path.resolve(__dirname, '../client/dist');
 const clientIndexPath = path.join(clientDistPath, 'index.html');
 const hasClientBuild  = fs.existsSync(clientIndexPath);
+const logsDir         = path.join(__dirname, 'logs');
 
 const app    = express();
 const PORT   = process.env.PORT || 3001;
 const isProd = process.env.NODE_ENV === 'production';
+
+// ── Logging setup ─────────────────────────────────────────────────────────────
+
+// Ensure logs/ directory exists
+if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
+
+// access.log — every HTTP request, rotating daily by appending date to filename
+function accessLogStream() {
+  const date     = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const filename = path.join(logsDir, `access-${date}.log`);
+  return fs.createWriteStream(filename, { flags: 'a' });
+}
+
+// error.log — single file, append forever (errors only, so it stays small)
+const errorLogStream = fs.createWriteStream(
+  path.join(logsDir, 'error.log'),
+  { flags: 'a' }
+);
+
+// Structured log writer used by the error handler below
+function writeErrorLog(entry) {
+  const line = JSON.stringify(entry) + '\n';
+  errorLogStream.write(line);
+}
+
+// ── App setup ─────────────────────────────────────────────────────────────────
 
 // Trust nginx/Cloudflare so rate limiters and HTTPS checks see real client IPs
 app.set('trust proxy', 1);
@@ -45,7 +72,15 @@ app.use(cors({
   origin: process.env.ALLOWED_ORIGIN || 'http://localhost:5173',
   credentials: true,
 }));
-app.use(morgan(isProd ? 'combined' : 'dev'));
+
+// In dev: pretty colours in terminal. In prod: combined format to both terminal AND file.
+if (isProd) {
+  app.use(morgan('combined', { stream: accessLogStream() })); // file
+  app.use(morgan('combined'));                                  // terminal
+} else {
+  app.use(morgan('dev'));                                       // terminal only
+}
+
 app.use(cookieParser());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
@@ -53,7 +88,7 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 // Static uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// API Routes
+// ── API Routes ────────────────────────────────────────────────────────────────
 app.use('/api/auth',      authRoutes);
 app.use('/api/drivers',   driverRoutes);
 app.use('/api/loads',     loadRoutes);
@@ -81,20 +116,36 @@ if (hasClientBuild) {
   });
 }
 
-// Global error handler — never leak internals in production
+// ── Global error handler ──────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(err.status || 500).json({
+  const status = err.status || 500;
+
+  // Always log 5xx errors to error.log
+  if (status >= 500) {
+    const entry = {
+      timestamp: new Date().toISOString(),
+      method:    req.method,
+      url:       req.originalUrl,
+      status,
+      message:   err.message,
+      stack:     isProd ? undefined : err.stack,
+    };
+    console.error('[error]', entry);
+    writeErrorLog(entry);
+  }
+
+  res.status(status).json({
     error: isProd ? 'Internal server error' : (err.message || 'Internal server error'),
   });
 });
 
-// Start
+// ── Start ─────────────────────────────────────────────────────────────────────
 const server = await (async () => {
   await initializeDatabase();
   await seedDatabase();
   return app.listen(PORT, () => {
     console.log(`🚛 ReturnLoad server running on http://localhost:${PORT}`);
+    if (isProd) console.log(`📝 Logs → ${logsDir}`);
     if (hasClientBuild) {
       console.log(`🌐 Serving frontend from ${clientDistPath}`);
     } else {
@@ -103,20 +154,20 @@ const server = await (async () => {
   });
 })();
 
-// Graceful shutdown — close DB pool and HTTP server cleanly
+// ── Graceful shutdown ─────────────────────────────────────────────────────────
 async function shutdown(signal) {
   console.log(`\n${signal} received — shutting down gracefully…`);
   server.close(async () => {
     try {
       await pool.end();
+      errorLogStream.end();
       console.log('✅ DB pool closed. Goodbye.');
     } catch (err) {
-      console.error('Error closing DB pool:', err.message);
+      console.error('Error during shutdown:', err.message);
     }
     process.exit(0);
   });
 
-  // Force exit after 10 seconds if something hangs
   setTimeout(() => {
     console.error('Forced shutdown after timeout.');
     process.exit(1);

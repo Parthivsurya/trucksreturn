@@ -124,6 +124,11 @@ export async function register(req, res) {
       [inserted.id]
     );
 
+    if (user.role === 'driver') {
+      const { rows: [truck] } = await pool.query('SELECT * FROM trucks WHERE user_id = $1', [user.id]);
+      user.truck = truck || null;
+    }
+
     const accessToken = issueAccessToken(user);
     const refreshToken = await issueRefreshToken(user.id);
     setRefreshCookie(res, refreshToken);
@@ -153,6 +158,12 @@ export async function login(req, res) {
     setRefreshCookie(res, refreshToken);
 
     const { password_hash, ...safeUser } = user;
+
+    if (safeUser.role === 'driver') {
+      const { rows: [truck] } = await pool.query('SELECT * FROM trucks WHERE user_id = $1', [user.id]);
+      safeUser.truck = truck || null;
+    }
+
     res.json({ token: accessToken, user: safeUser });
 
     sendLoginEmail(user).catch(() => {});
