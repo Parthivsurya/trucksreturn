@@ -1,12 +1,21 @@
 import { Link } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext.jsx';
-import { Truck, Package, MapPin, Shield, ArrowRight, Star, IndianRupee, Zap, Globe, Users, CheckCircle } from 'lucide-react';
+import { Truck, Package, MapPin, Shield, ArrowRight, Star, IndianRupee, Zap, Globe, Users, CheckCircle, Fuel, UserMinus, Navigation, Wrench } from 'lucide-react';
 
 export default function Landing() {
   const { settings } = useSettings();
-  const primary = settings.primary_color || '#0f172a';
-  const accent  = settings.accent_color  || '#f59e0b';
-  const siteName = settings.site_name    || 'ReturnLoad';
+  const primary     = settings.primary_color  || '#0f172a';
+  const accent      = settings.accent_color   || '#f59e0b';
+  const footerColor = settings.footer_color   || '#1e293b';
+  const siteName    = settings.site_name      || 'ReturnLoad';
+
+  // Determine if footer background is light or dark
+  const footerRgb = footerColor.match(/^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+  const footerLum = footerRgb
+    ? (0.299 * parseInt(footerRgb[1], 16) + 0.587 * parseInt(footerRgb[2], 16) + 0.114 * parseInt(footerRgb[3], 16)) / 255
+    : 0;
+  const footerText    = footerLum > 0.5 ? '#1e293b' : '#ffffff';
+  const footerSubtext = footerLum > 0.5 ? 'rgba(30,41,59,0.5)' : 'rgba(255,255,255,0.45)';
 
   const features = [
     { icon: MapPin,       title: 'Route-Based Matching',      desc: 'Smart algorithm finds loads along your return path — no major detours, maximum profit.' },
@@ -206,30 +215,47 @@ export default function Landing() {
 
           <div className="grid md:grid-cols-2 gap-8 items-start">
             {/* Cost breakdown */}
-            <div
-              className="rounded-2xl p-6 border"
-              style={{ backgroundColor: '#fafafa', borderColor: '#e2e8f0' }}
-            >
-              <h3 className="font-bold text-navy-900 mb-4 text-base">Cost of One Empty Return Trip</h3>
-              <div className="space-y-0">
-                {[
-                  { item: 'Diesel fuel',                   cost: '₹12,000 – ₹16,000', icon: '⛽' },
-                  { item: 'Driver wages (non-productive)', cost: '₹2,500 – ₹4,000',   icon: '👤' },
-                  { item: 'National Highway tolls',        cost: '₹3,000 – ₹6,000',   icon: '🛣️' },
-                  { item: 'Tyre & mechanical wear',        cost: '₹1,500 – ₹2,500',   icon: '🔧' },
-                ].map((r, i) => (
-                  <div key={i} className="flex items-center justify-between py-3 border-b border-slate-100">
-                    <span className="flex items-center gap-2.5 text-sm text-slate-600">
-                      <span className="text-base">{r.icon}</span>{r.item}
-                    </span>
-                    <span className="text-red-600 font-semibold text-sm">{r.cost}</span>
-                  </div>
-                ))}
+            <div className="rounded-2xl overflow-hidden border border-slate-200" style={{ boxShadow: '0 2px 12px rgba(15,23,42,0.06)' }}>
+              {/* Table header */}
+              <div className="flex items-center justify-between px-5 py-3" style={{ backgroundColor: primary }}>
+                <span className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.6)' }}>Expense</span>
+                <span className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.6)' }}>Typical Range</span>
+              </div>
+
+              {/* Rows */}
+              {[
+                { item: 'Diesel fuel',                   cost: '₹12,000 – ₹16,000', Icon: Fuel,        color: '#0369a1' },
+                { item: 'Driver wages (non-productive)', cost: '₹2,500 – ₹4,000',   Icon: UserMinus,   color: '#7c3aed' },
+                { item: 'National Highway tolls',        cost: '₹3,000 – ₹6,000',   Icon: Navigation,  color: '#0f766e' },
+                { item: 'Tyre & mechanical wear',        cost: '₹1,500 – ₹2,500',   Icon: Wrench,      color: '#b45309' },
+              ].map((r, i) => (
                 <div
-                  className="flex items-center justify-between pt-4 pb-1"
+                  key={i}
+                  className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100"
+                  style={{ backgroundColor: i % 2 === 0 ? '#ffffff' : '#f8fafc' }}
                 >
-                  <span className="font-bold text-navy-900">Total per empty run</span>
-                  <span className="font-black text-lg text-red-600">₹19,000 – ₹28,500</span>
+                  <span className="flex items-center gap-3 text-sm font-medium text-slate-700">
+                    <span
+                      className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: `${r.color}15` }}
+                    >
+                      <r.Icon size={14} style={{ color: r.color }} />
+                    </span>
+                    {r.item}
+                  </span>
+                  <span className="text-sm font-semibold tabular-nums" style={{ color: '#64748b' }}>{r.cost}</span>
+                </div>
+              ))}
+
+              {/* Total row */}
+              <div className="flex items-center justify-between px-5 py-4" style={{ backgroundColor: `${primary}08`, borderTop: `2px solid ${primary}20` }}>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-0.5">Total loss per empty run</p>
+                  <p className="text-sm font-semibold text-slate-600">Fuel + wages + tolls + wear</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-black" style={{ color: primary }}>₹19,000</p>
+                  <p className="text-xs text-slate-400 font-medium">up to ₹28,500</p>
                 </div>
               </div>
             </div>
@@ -283,9 +309,9 @@ export default function Landing() {
               >
                 <div
                   className="w-11 h-11 rounded-xl flex items-center justify-center mb-4"
-                  style={{ backgroundColor: `${primary}`, boxShadow: `2px 2px 0 ${accent}` }}
+                  style={{ backgroundColor: `${accent}18`, border: `1px solid ${accent}30` }}
                 >
-                  <f.icon size={19} style={{ color: accent }} />
+                  <f.icon size={19} style={{ color: primary }} />
                 </div>
                 <h3 className="font-bold text-navy-900 text-base mb-2">{f.title}</h3>
                 <p className="text-slate-500 text-sm leading-relaxed">{f.desc}</p>
@@ -339,7 +365,7 @@ export default function Landing() {
 
       {/* ━━━━ FOOTER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <footer
-        style={{ backgroundColor: '#1e293b', borderTop: `2px solid ${accent}` }}
+        style={{ backgroundColor: footerColor, borderTop: `2px solid ${accent}` }}
         className="py-8 px-4 sm:px-6"
       >
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -351,11 +377,11 @@ export default function Landing() {
               <Truck size={15} style={{ color: primary }} />
             </div>
             <div>
-              <span className="text-sm font-bold text-white">{siteName}</span>
-              <span className="text-xs text-slate-500 ml-2">© 2026</span>
+              <span className="text-sm font-bold" style={{ color: footerText }}>{siteName}</span>
+              <span className="text-xs ml-2" style={{ color: footerSubtext }}>© 2026</span>
             </div>
           </div>
-          <p className="text-xs text-slate-500">Smart return load platform · Made for Indian road freight 🇮🇳</p>
+          <p className="text-xs" style={{ color: footerSubtext }}>Smart return load platform · Made for Indian road freight 🇮🇳</p>
         </div>
       </footer>
     </div>

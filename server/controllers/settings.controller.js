@@ -2,7 +2,7 @@ import pool from '../db/db.js';
 import { testEmail as sendTestEmail } from '../services/email.service.js';
 
 const ALLOWED_KEYS = [
-  'site_name', 'logo_url', 'primary_color', 'accent_color', 'theme_preset',
+  'site_name', 'logo_url', 'primary_color', 'accent_color', 'footer_color', 'theme_preset',
   'smtp_enabled', 'smtp_host', 'smtp_port', 'smtp_secure',
   'smtp_user', 'smtp_pass', 'smtp_from_name', 'smtp_from_email',
   'email_on_login', 'email_on_booking_shipper', 'email_on_booking_driver',

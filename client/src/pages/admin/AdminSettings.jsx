@@ -19,7 +19,7 @@ const PRESETS = [
 export default function AdminSettings() {
   const api = useAdminApi();
   const { settings, setSettings } = useSettings();
-  const [form, setForm]         = useState({ site_name: '', logo_url: '', primary_color: '#0f172a', accent_color: '#f59e0b', theme_preset: 'freight', smtp_enabled: '0', smtp_host: '', smtp_port: '587', smtp_secure: '0', smtp_user: '', smtp_pass: '', smtp_from_name: '', smtp_from_email: '', email_on_login: '1', email_on_booking_shipper: '1', email_on_booking_driver: '1', email_on_status_change: '1', email_on_load_status: '1', security_rate_limit: '1', security_otp_required: '1' });
+  const [form, setForm]         = useState({ site_name: '', logo_url: '', primary_color: '#0f172a', accent_color: '#f59e0b', footer_color: '#1e293b', theme_preset: 'freight', smtp_enabled: '0', smtp_host: '', smtp_port: '587', smtp_secure: '0', smtp_user: '', smtp_pass: '', smtp_from_name: '', smtp_from_email: '', email_on_login: '1', email_on_booking_shipper: '1', email_on_booking_driver: '1', email_on_status_change: '1', email_on_load_status: '1', security_rate_limit: '1', security_otp_required: '1' });
   const [savingSecurity, setSavingSecurity] = useState(false);
   const [savingTheme, setSavingTheme] = useState(false);
   const [savingSmtp,  setSavingSmtp]  = useState(false);
@@ -43,6 +43,7 @@ export default function AdminSettings() {
         smtp_from_name:          settings.smtp_from_name          || '',
         smtp_from_email:         settings.smtp_from_email         || '',
         accent_color:            settings.accent_color            ?? '#1976D2',
+        footer_color:            settings.footer_color            ?? '#1e293b',
         security_rate_limit:     settings.security_rate_limit     ?? '1',
         security_otp_required:   settings.security_otp_required   ?? '1',
         email_on_login:          settings.email_on_login          ?? '1',
@@ -79,7 +80,8 @@ export default function AdminSettings() {
     try {
       const data = await api.put('/settings', {
         site_name: form.site_name, logo_url: form.logo_url,
-        primary_color: form.primary_color, accent_color: form.accent_color, theme_preset: form.theme_preset,
+        primary_color: form.primary_color, accent_color: form.accent_color,
+        footer_color: form.footer_color, theme_preset: form.theme_preset,
       });
       setSettings(data);
       toast.success('Theme saved');
@@ -226,7 +228,7 @@ export default function AdminSettings() {
             })}
           </div>
 
-          {/* Custom color pickers — primary + accent */}
+          {/* Custom color pickers — primary + accent + footer */}
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Custom colors</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -268,6 +270,32 @@ export default function AdminSettings() {
                     className="input-field !py-1.5 font-mono text-sm"
                     maxLength={7}
                   />
+                </div>
+              </div>
+              {/* Footer */}
+              <div className="flex items-center gap-3 sm:col-span-2">
+                <input
+                  type="color"
+                  value={form.footer_color}
+                  onChange={e => setForm(f => ({ ...f, footer_color: e.target.value }))}
+                  className="w-10 h-10 rounded-lg border border-slate-200 cursor-pointer p-0.5 bg-white shrink-0"
+                />
+                <div className="flex-1">
+                  <p className="text-xs text-slate-500 mb-1">Footer Background</p>
+                  <input
+                    type="text"
+                    value={form.footer_color}
+                    onChange={e => setForm(f => ({ ...f, footer_color: e.target.value }))}
+                    placeholder="#1e293b"
+                    className="input-field !py-1.5 font-mono text-sm"
+                    maxLength={7}
+                  />
+                </div>
+                <div
+                  className="w-24 h-10 rounded-xl border border-slate-200 shrink-0 flex items-center justify-center"
+                  style={{ backgroundColor: form.footer_color }}
+                >
+                  <span className="text-[10px] font-semibold mix-blend-difference text-white">Footer</span>
                 </div>
               </div>
             </div>

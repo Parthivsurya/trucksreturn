@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
 
 const SettingsContext = createContext({
-  settings: { site_name: 'ReturnLoad', logo_url: '', primary_color: '#0f172a', accent_color: '#f59e0b', theme_preset: 'freight' },
+  settings: { site_name: 'ReturnLoad', logo_url: '', primary_color: '#0f172a', accent_color: '#f59e0b', theme_preset: 'freight', footer_color: '#1e293b' },
   refresh: () => {},
 });
 
@@ -13,6 +13,7 @@ export function SettingsProvider({ children }) {
     primary_color: '#0f172a',
     accent_color: '#f59e0b',
     theme_preset: 'freight',
+    footer_color: '#1e293b',
   });
 
   async function refresh() {
