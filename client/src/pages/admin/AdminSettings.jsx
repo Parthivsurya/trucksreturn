@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import AdminLayout from '../../components/AdminLayout.jsx';
 import { useAdminApi } from '../../hooks/useAdminApi.js';
 import { useSettings } from '../../context/SettingsContext.jsx';
-import { Settings, Palette, Type, Check, Mail, Eye, EyeOff, Send, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Settings, Palette, Type, Check, Mail, Eye, EyeOff, Send, ToggleLeft, ToggleRight, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const PRESETS = [
@@ -19,7 +19,8 @@ const PRESETS = [
 export default function AdminSettings() {
   const api = useAdminApi();
   const { settings, setSettings } = useSettings();
-  const [form, setForm]         = useState({ site_name: '', logo_url: '', primary_color: '#0f172a', accent_color: '#f59e0b', theme_preset: 'freight', smtp_enabled: '0', smtp_host: '', smtp_port: '587', smtp_secure: '0', smtp_user: '', smtp_pass: '', smtp_from_name: '', smtp_from_email: '', email_on_login: '1', email_on_booking_shipper: '1', email_on_booking_driver: '1', email_on_status_change: '1', email_on_load_status: '1' });
+  const [form, setForm]         = useState({ site_name: '', logo_url: '', primary_color: '#0f172a', accent_color: '#f59e0b', theme_preset: 'freight', smtp_enabled: '0', smtp_host: '', smtp_port: '587', smtp_secure: '0', smtp_user: '', smtp_pass: '', smtp_from_name: '', smtp_from_email: '', email_on_login: '1', email_on_booking_shipper: '1', email_on_booking_driver: '1', email_on_status_change: '1', email_on_load_status: '1', security_rate_limit: '1', security_otp_required: '1' });
+  const [savingSecurity, setSavingSecurity] = useState(false);
   const [savingTheme, setSavingTheme] = useState(false);
   const [savingSmtp,  setSavingSmtp]  = useState(false);
   const [showPass, setShowPass] = useState(false);
@@ -42,6 +43,8 @@ export default function AdminSettings() {
         smtp_from_name:          settings.smtp_from_name          || '',
         smtp_from_email:         settings.smtp_from_email         || '',
         accent_color:            settings.accent_color            ?? '#1976D2',
+        security_rate_limit:     settings.security_rate_limit     ?? '1',
+        security_otp_required:   settings.security_otp_required   ?? '1',
         email_on_login:          settings.email_on_login          ?? '1',
         email_on_booking_shipper:settings.email_on_booking_shipper ?? '1',
         email_on_booking_driver: settings.email_on_booking_driver  ?? '1',
@@ -82,6 +85,19 @@ export default function AdminSettings() {
       toast.success('Theme saved');
     } catch (err) { toast.error(err.message); }
     setSavingTheme(false);
+  }
+
+  async function saveSecurity() {
+    setSavingSecurity(true);
+    try {
+      const data = await api.put('/settings', {
+        security_rate_limit:   form.security_rate_limit,
+        security_otp_required: form.security_otp_required,
+      });
+      setSettings(data);
+      toast.success('Security settings saved');
+    } catch (err) { toast.error(err.message); }
+    setSavingSecurity(false);
   }
 
   async function saveSmtp() {
@@ -413,6 +429,60 @@ export default function AdminSettings() {
           <div className="mt-5 flex justify-end">
             <button onClick={saveSmtp} disabled={savingSmtp} className="btn-primary flex items-center gap-2">
               <Check size={15} /> {savingSmtp ? 'Saving…' : 'Save Email Settings'}
+            </button>
+          </div>
+        </section>
+
+        {/* Security */}
+        <section className="card mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+              <ShieldCheck size={15} className="text-slate-600" />
+            </div>
+            <div>
+              <h2 className="font-bold text-navy-900">Security</h2>
+              <p className="text-xs text-slate-400">Toggle these off only while testing. Turn them back on before going live.</p>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 mb-4">
+            ⚠️ Disabling security features exposes your platform to abuse. Only turn them off during local testing.
+          </div>
+
+          <div className="border border-slate-200 rounded-xl overflow-hidden">
+            {[
+              {
+                key: 'security_rate_limit',
+                label: 'Rate Limiting',
+                desc: 'Limits OTP requests (5/15 min), logins (10/15 min), and registrations (5/hr) per IP. Disable if you\'re hitting limits while testing.',
+              },
+              {
+                key: 'security_otp_required',
+                label: 'OTP Email Verification',
+                desc: 'Requires email OTP for registration and password reset. When OFF, the OTP is returned in the API response and auto-filled on screen — no email needed.',
+              },
+            ].map(({ key, label, desc }) => (
+              <div key={key} className="flex items-center justify-between px-4 py-4 border-b border-slate-100 last:border-0">
+                <div>
+                  <p className="text-sm font-semibold text-slate-700">{label}</p>
+                  <p className="text-xs text-slate-400 mt-0.5 max-w-md">{desc}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, [key]: f[key] === '1' ? '0' : '1' }))}
+                  className="flex items-center gap-2 text-sm font-medium shrink-0 ml-6"
+                >
+                  {form[key] === '1'
+                    ? <><ToggleRight size={28} className="text-green-500" /><span className="text-green-600 text-xs">ON</span></>
+                    : <><ToggleLeft  size={28} className="text-slate-400" /><span className="text-slate-400 text-xs">OFF</span></>}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 flex justify-end">
+            <button onClick={saveSecurity} disabled={savingSecurity} className="btn-primary flex items-center gap-2">
+              <Check size={15} /> {savingSecurity ? 'Saving…' : 'Save Security Settings'}
             </button>
           </div>
         </section>

@@ -9,6 +9,7 @@ import AdminRoute from './components/AdminRoute.jsx';
 import Landing from './pages/Landing.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
+import ForgotPassword from './pages/ForgotPassword.jsx';
 
 import DriverDashboard from './pages/driver/Dashboard.jsx';
 import SetAvailability from './pages/driver/SetAvailability.jsx';
@@ -57,6 +58,7 @@ function MainApp() {
         <Route path="/" element={user ? <Navigate to={user.role === 'driver' ? '/driver' : '/shipper'} /> : <Landing />} />
         <Route path="/login" element={user ? <Navigate to={user.role === 'driver' ? '/driver' : '/shipper'} /> : <Login />} />
         <Route path="/register" element={user ? <Navigate to={user.role === 'driver' ? '/driver' : '/shipper'} /> : <Register />} />
+        <Route path="/forgot-password" element={user ? <Navigate to={user.role === 'driver' ? '/driver' : '/shipper'} /> : <ForgotPassword />} />
 
         {/* Driver Routes */}
         <Route path="/driver" element={<ProtectedRoute role="driver"><DriverDashboard /></ProtectedRoute>} />

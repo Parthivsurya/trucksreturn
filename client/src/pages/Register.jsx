@@ -35,8 +35,13 @@ export default function Register() {
     setEmailError('');
     setLoading(true);
     try {
-      await api.post('/auth/send-otp', { email: form.email });
-      toast.success(`OTP sent to ${form.email}`);
+      const data = await api.post('/auth/send-otp', { email: form.email });
+      if (data.dev_otp) {
+        setOtp(data.dev_otp.split(''));
+        toast.success(`Testing mode — OTP auto-filled: ${data.dev_otp}`);
+      } else {
+        toast.success(`OTP sent to ${form.email}`);
+      }
       setStep(3);
     } catch (err) {
       if (err.message?.toLowerCase().includes('already registered')) {

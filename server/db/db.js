@@ -6,6 +6,11 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+if (!process.env.DATABASE_URL) {
+  console.error('FATAL: DATABASE_URL environment variable is not set. Refusing to start.');
+  process.exit(1);
+}
+
 const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -23,6 +28,14 @@ pool.on('error', (err) => {
 });
 
 export async function initializeDatabase() {
+  // Verify the connection is actually reachable before doing anything
+  try {
+    await pool.query('SELECT 1');
+  } catch (err) {
+    console.error('FATAL: Cannot connect to PostgreSQL:', err.message);
+    process.exit(1);
+  }
+
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   await pool.query(schema);
   await runMigrations();
@@ -50,6 +63,8 @@ async function runMigrations() {
     ['email_on_booking_driver',  '1'],
     ['email_on_status_change',   '1'],
     ['email_on_load_status',     '1'],
+    ['security_rate_limit',      '1'],
+    ['security_otp_required',    '1'],
   ];
   for (const [key, value] of defaultSettings) {
     await pool.query(

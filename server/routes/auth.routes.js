@@ -1,39 +1,55 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { body, validationResult } from 'express-validator';
-import { register, login, getMe, sendOtp, refresh, logout } from '../controllers/auth.controller.js';
+import { register, login, getMe, sendOtp, refresh, logout, forgotPassword, resetPassword } from '../controllers/auth.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { PgRateLimitStore } from '../stores/rateLimitStore.js';
+import pool from '../db/db.js';
 
 const router = Router();
 
+// Check DB setting — if security_rate_limit === '0', skip the limiter
+async function isRateLimitEnabled() {
+  try {
+    const { rows: [row] } = await pool.query("SELECT value FROM settings WHERE key = 'security_rate_limit'");
+    return row?.value !== '0';
+  } catch { return true; }
+}
+
+function conditionalLimit(limiter) {
+  return async (req, res, next) => {
+    if (!(await isRateLimitEnabled())) return next();
+    return limiter(req, res, next);
+  };
+}
+
 // Persistent rate limiters backed by PostgreSQL
-const otpLimiter = rateLimit({
+const otpLimiter = conditionalLimit(rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
   store: new PgRateLimitStore(15 * 60 * 1000),
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many OTP requests. Try again in 15 minutes.' },
-});
+}));
 
-const loginLimiter = rateLimit({
+const loginLimiter = conditionalLimit(rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   store: new PgRateLimitStore(15 * 60 * 1000),
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many login attempts. Try again in 15 minutes.' },
-});
+}));
 
-const registerLimiter = rateLimit({
+const registerLimiter = conditionalLimit(rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,
   store: new PgRateLimitStore(60 * 60 * 1000),
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many registrations from this IP. Try again later.' },
-});
+}));
 
 // Validation middleware
 function validate(req, res, next) {
@@ -62,11 +78,13 @@ const loginRules = [
   body('password').notEmpty().withMessage('Password is required.'),
 ];
 
-router.post('/send-otp', otpLimiter, otpRules, validate, sendOtp);
-router.post('/register', registerLimiter, registerRules, validate, register);
-router.post('/login', loginLimiter, loginRules, validate, login);
-router.post('/refresh', refresh);
-router.post('/logout', logout);
-router.get('/me', authenticate, getMe);
+router.post('/send-otp',       otpLimiter,      otpRules,      validate, sendOtp);
+router.post('/register',       registerLimiter, registerRules, validate, register);
+router.post('/login',          loginLimiter,    loginRules,    validate, login);
+router.post('/forgot-password', otpLimiter,     otpRules,      validate, forgotPassword);
+router.post('/reset-password', resetPassword);
+router.post('/refresh',        refresh);
+router.post('/logout',         logout);
+router.get('/me',              authenticate, getMe);
 
 export default router;

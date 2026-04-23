@@ -2,9 +2,13 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import pool from '../db/db.js';
+import { serverError } from '../utils/errors.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.webp'];
+const ALLOWED_MIMETYPES  = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -12,18 +16,21 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, `${req.user.id}-${uniqueSuffix}${path.extname(file.originalname)}`);
+    cb(null, `${req.user.id}-${uniqueSuffix}${path.extname(file.originalname).toLowerCase()}`);
   },
 });
 
 export const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
   fileFilter: (req, file, cb) => {
-    const allowed = ['.pdf', '.jpg', '.jpeg', '.png', '.webp'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowed.includes(ext)) cb(null, true);
-    else cb(new Error('Only PDF and image files are allowed.'));
+    const ext  = path.extname(file.originalname).toLowerCase();
+    const mime = file.mimetype;
+    if (ALLOWED_EXTENSIONS.includes(ext) && ALLOWED_MIMETYPES.includes(mime)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF and image files (JPG, PNG, WebP) are allowed.'));
+    }
   },
 });
 
@@ -44,7 +51,7 @@ export async function uploadDocument(req, res) {
     );
     res.status(201).json({ message: 'Document uploaded.', file_url });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return serverError(res, err, 'upload:document');
   }
 }
 
@@ -57,6 +64,6 @@ export async function getUserDocuments(req, res) {
     );
     res.json({ documents });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return serverError(res, err, 'upload:getUserDocs');
   }
 }

@@ -7,6 +7,7 @@ const ALLOWED_KEYS = [
   'smtp_user', 'smtp_pass', 'smtp_from_name', 'smtp_from_email',
   'email_on_login', 'email_on_booking_shipper', 'email_on_booking_driver',
   'email_on_status_change', 'email_on_load_status',
+  'security_rate_limit', 'security_otp_required',
 ];
 
 export async function getSettings(req, res) {

@@ -4,6 +4,11 @@ import crypto from 'crypto';
 import pool from '../db/db.js';
 import { sendLoginEmail, sendOtpEmail } from '../services/email.service.js';
 
+async function getSecuritySettings() {
+  const { rows } = await pool.query("SELECT key, value FROM settings WHERE key LIKE 'security_%'");
+  return Object.fromEntries(rows.map(r => [r.key, r.value]));
+}
+
 if (!process.env.JWT_SECRET) {
   throw new Error('FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
 }
@@ -61,15 +66,21 @@ export async function sendOtp(req, res) {
       [email, otp, expiresAt]
     );
 
-    try {
-      await sendOtpEmail({ email, otp });
-    } catch (emailErr) {
-      await pool.query('DELETE FROM otp_tokens WHERE email = $1', [email]);
-      console.error('[auth] sendOtp:email:', emailErr);
-      return res.status(503).json({ error: emailErr.message });
+    const sec = await getSecuritySettings();
+    if (sec.security_otp_required !== '0') {
+      try {
+        await sendOtpEmail({ email, otp });
+      } catch (emailErr) {
+        await pool.query('DELETE FROM otp_tokens WHERE email = $1', [email]);
+        console.error('[auth] sendOtp:email:', emailErr);
+        return res.status(503).json({ error: emailErr.message });
+      }
+      return res.json({ message: 'OTP sent to your email.' });
     }
 
-    res.json({ message: 'OTP sent to your email.' });
+    // OTP enforcement disabled (testing mode) — return OTP directly
+    console.warn(`[auth] OTP enforcement OFF — dev_otp exposed for ${email}`);
+    res.json({ message: 'OTP enforcement disabled (testing mode).', dev_otp: otp });
   } catch (err) {
     return internalError(res, err, 'sendOtp');
   }
@@ -198,6 +209,81 @@ export async function logout(req, res) {
     res.json({ message: 'Logged out successfully.' });
   } catch (err) {
     return internalError(res, err, 'logout');
+  }
+}
+
+export async function forgotPassword(req, res) {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required.' });
+
+    const { rows: [user] } = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+    // Don't reveal whether email exists — always respond the same way
+    if (!user) return res.json({ message: 'If this email is registered, an OTP has been sent.' });
+
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    await pool.query(
+      'INSERT INTO otp_tokens (email, otp, expires_at) VALUES ($1, $2, $3) ON CONFLICT (email) DO UPDATE SET otp = EXCLUDED.otp, expires_at = EXCLUDED.expires_at',
+      [email, otp, expiresAt]
+    );
+
+    const sec = await getSecuritySettings();
+    if (sec.security_otp_required !== '0') {
+      try {
+        await sendOtpEmail({ email, otp });
+      } catch (emailErr) {
+        await pool.query('DELETE FROM otp_tokens WHERE email = $1', [email]);
+        console.error('[auth] forgotPassword:email:', emailErr);
+        return res.status(503).json({ error: emailErr.message });
+      }
+      return res.json({ message: 'OTP sent to your email.' });
+    }
+
+    console.warn(`[auth] OTP enforcement OFF — dev_otp exposed for ${email}`);
+    res.json({ message: 'OTP enforcement disabled (testing mode).', dev_otp: otp });
+  } catch (err) {
+    return internalError(res, err, 'forgotPassword');
+  }
+}
+
+export async function resetPassword(req, res) {
+  try {
+    const { email, otp, password } = req.body;
+
+    if (!email || !otp || !password) {
+      return res.status(400).json({ error: 'Email, OTP, and new password are required.' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    }
+
+    const { rows: [token] } = await pool.query('SELECT * FROM otp_tokens WHERE email = $1', [email]);
+    if (!token) return res.status(400).json({ error: 'No OTP found. Please request a new one.' });
+    if (new Date() > new Date(token.expires_at)) {
+      await pool.query('DELETE FROM otp_tokens WHERE email = $1', [email]);
+      return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
+    }
+    if (token.otp !== String(otp)) {
+      return res.status(400).json({ error: 'Incorrect OTP. Please try again.' });
+    }
+
+    const { rows: [user] } = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (!user) return res.status(404).json({ error: 'Account not found.' });
+
+    const password_hash = bcrypt.hashSync(password, 10);
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [password_hash, user.id]);
+
+    // Clean up OTP and invalidate all existing sessions
+    await Promise.all([
+      pool.query('DELETE FROM otp_tokens WHERE email = $1', [email]),
+      pool.query('DELETE FROM refresh_tokens WHERE user_id = $1', [user.id]),
+    ]);
+
+    res.json({ message: 'Password reset successfully. Please log in with your new password.' });
+  } catch (err) {
+    return internalError(res, err, 'resetPassword');
   }
 }
 

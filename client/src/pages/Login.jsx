@@ -14,19 +14,31 @@ export default function Login() {
   const accent   = settings.accent_color  || '#f59e0b';
   const siteName = settings.site_name     || 'ReturnLoad';
 
-  const [form, setForm]        = useState({ email: '', password: '' });
-  const [showPass, setShowPass] = useState(false);
-  const [loading, setLoading]  = useState(false);
+  const [form, setForm]           = useState({ email: '', password: '' });
+  const [showPass, setShowPass]   = useState(false);
+  const [loading, setLoading]     = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+
+  function handleChange(field, value) {
+    if (field === 'password') setPasswordError('');
+    setForm(prev => ({ ...prev, [field]: value }));
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setPasswordError('');
     setLoading(true);
     try {
       const data = await login(form.email, form.password);
       toast.success(`Welcome back, ${data.user.name}!`);
       navigate(data.user.role === 'driver' ? '/driver' : '/shipper');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Login failed');
+      const msg = err.response?.data?.error || err.message || 'Login failed';
+      if (err.response?.status === 401) {
+        setPasswordError('Wrong password. Please try again.');
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -50,8 +62,6 @@ export default function Login() {
           className="absolute inset-0 pointer-events-none"
           style={{ background: `radial-gradient(ellipse at 80% 15%, ${accent}28 0%, transparent 55%)` }}
         />
-
-        {/* Message */}
         <div className="relative">
           <h2 className="text-3xl xl:text-4xl font-black text-white leading-tight mb-4">
             Every Return<br />
@@ -70,7 +80,6 @@ export default function Login() {
             ))}
           </div>
         </div>
-
         <p className="absolute bottom-6 left-10 text-xs" style={{ color: 'rgba(255,255,255,0.22)' }}>© 2026 {siteName}</p>
       </div>
 
@@ -97,24 +106,46 @@ export default function Login() {
               <label className="block text-sm font-medium text-slate-600 mb-1.5">Email address</label>
               <div className="relative">
                 <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input type="email" required value={form.email}
-                  onChange={e => setForm({ ...form, email: e.target.value })}
-                  className="input-field !pl-10" placeholder="you@example.com" />
+                <input
+                  type="email" required value={form.email}
+                  onChange={e => handleChange('email', e.target.value)}
+                  className="input-field !pl-10" placeholder="you@example.com"
+                />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1.5">Password</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-medium text-slate-600">Password</label>
+                <Link
+                  to="/forgot-password"
+                  className="text-xs font-semibold hover:underline"
+                  style={{ color: accent }}
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
                 <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input type={showPass ? 'text' : 'password'} required value={form.password}
-                  onChange={e => setForm({ ...form, password: e.target.value })}
-                  className="input-field !pl-10 !pr-10" placeholder="••••••••" />
+                <input
+                  type={showPass ? 'text' : 'password'} required value={form.password}
+                  onChange={e => handleChange('password', e.target.value)}
+                  className={`input-field !pl-10 !pr-10 ${passwordError ? 'border-red-400 focus:border-red-400' : ''}`}
+                  placeholder="••••••••"
+                />
                 <button type="button" onClick={() => setShowPass(!showPass)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                   {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              {passwordError && (
+                <span className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                  {passwordError}{' '}
+                  <Link to="/forgot-password" className="font-semibold underline" style={{ color: accent }}>
+                    Reset it
+                  </Link>
+                </span>
+              )}
             </div>
 
             {/* Demo hint */}
@@ -138,9 +169,9 @@ export default function Login() {
 
           <div className="mt-6 grid grid-cols-3 gap-3 max-w-sm mx-auto lg:max-w-none">
             {[
-              { value: '10M+', label: 'Truck operators' },
+              { value: '10M+',   label: 'Truck operators' },
               { value: '₹40K Cr', label: 'Freight market' },
-              { value: '100%', label: 'Free to join' },
+              { value: '100%',   label: 'Free to join' },
             ].map(({ value, label }) => (
               <div key={label} className="text-center p-3 rounded-xl" style={{ backgroundColor: `${accent}0d`, border: `1px solid ${accent}25` }}>
                 <p className="text-sm font-black" style={{ color: accent }}>{value}</p>

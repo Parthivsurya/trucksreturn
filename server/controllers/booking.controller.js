@@ -4,6 +4,7 @@ import {
   sendBookingCreatedToDriver,
   sendBookingStatusUpdate,
 } from '../services/email.service.js';
+import { serverError } from '../utils/errors.js';
 
 export async function createBooking(req, res) {
   try {
@@ -11,6 +12,10 @@ export async function createBooking(req, res) {
 
     if (!load_id || !agreed_price) {
       return res.status(400).json({ error: 'Load ID and agreed price are required.' });
+    }
+    const priceNum = parseFloat(agreed_price);
+    if (isNaN(priceNum) || priceNum <= 0) {
+      return res.status(400).json({ error: 'Invalid agreed price.' });
     }
 
     const { rows: [load] } = await pool.query("SELECT * FROM loads WHERE id = $1 AND status = 'open'", [load_id]);
@@ -25,7 +30,7 @@ export async function createBooking(req, res) {
 
     const { rows: [newBooking] } = await pool.query(
       'INSERT INTO bookings (load_id, driver_id, shipper_id, agreed_price) VALUES ($1,$2,$3,$4) RETURNING *',
-      [load_id, req.user.id, load.user_id, agreed_price]
+      [load_id, req.user.id, load.user_id, priceNum]
     );
 
     await pool.query("UPDATE loads SET status = 'booked' WHERE id = $1", [load_id]);
@@ -46,7 +51,7 @@ export async function createBooking(req, res) {
       sendBookingCreatedToDriver({ booking: newBooking, load: fullLoad, driver }),
     ]).catch(() => {});
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return serverError(res, err, 'booking:create');
   }
 }
 
@@ -69,7 +74,7 @@ export async function updateBookingStatus(req, res) {
     const delivered_at = status === 'delivered' ? new Date().toISOString() : null;
 
     await pool.query(
-      `UPDATE bookings SET status=$1, picked_up_at=COALESCE($2,picked_up_at), delivered_at=COALESCE($3,delivered_at) WHERE id=$4`,
+      'UPDATE bookings SET status=$1, picked_up_at=COALESCE($2,picked_up_at), delivered_at=COALESCE($3,delivered_at) WHERE id=$4',
       [status, picked_up_at, delivered_at, req.params.id]
     );
 
@@ -77,7 +82,8 @@ export async function updateBookingStatus(req, res) {
     await pool.query('UPDATE loads SET status = $1 WHERE id = $2', [loadStatus, booking.load_id]);
 
     const { rows: [updated] } = await pool.query(`
-      SELECT b.*, l.pickup_city, l.delivery_city, l.cargo_type, l.weight_tons, l.pickup_lat, l.pickup_lng, l.delivery_lat, l.delivery_lng
+      SELECT b.*, l.pickup_city, l.delivery_city, l.cargo_type, l.weight_tons,
+             l.pickup_lat, l.pickup_lng, l.delivery_lat, l.delivery_lng
       FROM bookings b JOIN loads l ON b.load_id = l.id WHERE b.id = $1
     `, [req.params.id]);
 
@@ -92,7 +98,7 @@ export async function updateBookingStatus(req, res) {
       sendBookingStatusUpdate({ booking, load: fullLoad, newStatus: status, toUser: shipper, role: 'shipper' }),
     ]).catch(() => {});
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return serverError(res, err, 'booking:updateStatus');
   }
 }
 
@@ -124,13 +130,19 @@ export async function getBookingById(req, res) {
 
     res.json({ booking, tracking });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return serverError(res, err, 'booking:getById');
   }
 }
 
 export async function addTrackingUpdate(req, res) {
   try {
     const { lat, lng, status_message } = req.body;
+    if (!lat || !lng) return res.status(400).json({ error: 'lat and lng are required.' });
+
+    const latNum = parseFloat(lat);
+    const lngNum = parseFloat(lng);
+    if (isNaN(latNum) || isNaN(lngNum)) return res.status(400).json({ error: 'Invalid coordinates.' });
+
     const { rows: [booking] } = await pool.query(
       'SELECT * FROM bookings WHERE id = $1 AND driver_id = $2',
       [req.params.id, req.user.id]
@@ -139,18 +151,19 @@ export async function addTrackingUpdate(req, res) {
 
     await pool.query(
       'INSERT INTO tracking_updates (booking_id, lat, lng, status_message) VALUES ($1,$2,$3,$4)',
-      [req.params.id, lat, lng, status_message || null]
+      [req.params.id, latNum, lngNum, status_message?.trim() || null]
     );
     res.status(201).json({ message: 'Tracking update recorded.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return serverError(res, err, 'booking:addTracking');
   }
 }
 
 export async function rateBooking(req, res) {
   try {
     const { score, comment } = req.body;
-    if (!score || score < 1 || score > 5) {
+    const scoreNum = parseInt(score);
+    if (!scoreNum || scoreNum < 1 || scoreNum > 5) {
       return res.status(400).json({ error: 'Score must be between 1 and 5.' });
     }
 
@@ -159,6 +172,10 @@ export async function rateBooking(req, res) {
       [req.params.id]
     );
     if (!booking) return res.status(404).json({ error: 'Booking not found or not delivered.' });
+
+    if (booking.driver_id !== req.user.id && booking.shipper_id !== req.user.id) {
+      return res.status(403).json({ error: 'Unauthorized.' });
+    }
 
     const to_user_id = req.user.id === booking.driver_id ? booking.shipper_id : booking.driver_id;
 
@@ -170,7 +187,7 @@ export async function rateBooking(req, res) {
 
     await pool.query(
       'INSERT INTO ratings (booking_id, from_user_id, to_user_id, score, comment) VALUES ($1,$2,$3,$4,$5)',
-      [req.params.id, req.user.id, to_user_id, score, comment || null]
+      [req.params.id, req.user.id, to_user_id, scoreNum, comment?.trim() || null]
     );
 
     const { rows: [{ avg, cnt }] } = await pool.query(
@@ -184,12 +201,16 @@ export async function rateBooking(req, res) {
 
     res.status(201).json({ message: 'Rating submitted.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return serverError(res, err, 'booking:rate');
   }
 }
 
 export async function getShipperBookings(req, res) {
   try {
+    const page   = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit  = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
     const { rows: bookings } = await pool.query(`
       SELECT b.*, l.pickup_city, l.delivery_city, l.cargo_type, l.weight_tons,
              u.name as driver_name, u.avg_rating as driver_rating,
@@ -200,9 +221,10 @@ export async function getShipperBookings(req, res) {
       LEFT JOIN trucks t ON t.user_id = b.driver_id
       WHERE b.shipper_id = $1
       ORDER BY b.booked_at DESC
-    `, [req.user.id]);
-    res.json({ bookings });
+      LIMIT $2 OFFSET $3
+    `, [req.user.id, limit, offset]);
+    res.json({ bookings, page, limit });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return serverError(res, err, 'booking:getShipperBookings');
   }
 }
