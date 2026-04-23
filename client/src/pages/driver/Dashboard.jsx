@@ -37,11 +37,11 @@ export default function DriverDashboard() {
             <p className="section-subtitle">Your return load dashboard overview</p>
           </div>
           <div className="flex gap-3">
-            <Link to="/driver/availability" className="btn-primary flex items-center gap-2">
-              <Navigation size={17} /> Set Route
+            <Link to="/driver/availability" className="btn-primary flex items-center gap-2 !px-4 !py-2.5 text-sm">
+              <Navigation size={16} /> Set Route
             </Link>
-            <Link to="/driver/find-loads" className="btn-secondary flex items-center gap-2">
-              <Search size={17} /> Find Loads
+            <Link to="/driver/find-loads" className="btn-secondary flex items-center gap-2 !px-4 !py-2.5 text-sm">
+              <Search size={16} /> Find Loads
             </Link>
           </div>
         </div>
@@ -89,7 +89,7 @@ export default function DriverDashboard() {
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
             <StatCard icon={Truck}        label="Completed Trips"  value={stats.totalTrips}    color="blue" />
             <StatCard icon={IndianRupee}  label="Total Earnings"   value={stats.totalEarnings} color="green" prefix="₹" />
             <StatCard icon={BookOpen}     label="Active Bookings"  value={stats.activeBookings} color="amber" />

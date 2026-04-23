@@ -69,10 +69,27 @@ export default function LoadDetails() {
                 <p className="text-2xl font-black" style={{ color: 'var(--accent)' }}>₹{Number(load.offered_price).toLocaleString('en-IN')}</p>
               </div>
 
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl mb-4 border border-slate-100">
-                <div className="flex items-center gap-1 text-green-700"><MapPin size={15} />{load.pickup_city}</div>
-                <ArrowRight size={15} className="text-slate-400" />
-                <div className="flex items-center gap-1 text-red-600"><MapPin size={15} />{load.delivery_city}</div>
+              <div className="rounded-xl mb-4 border border-slate-100 overflow-hidden">
+                <div className="flex items-start gap-3 p-3.5 bg-green-50 border-b border-slate-100">
+                  <MapPin size={15} className="text-green-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-0.5">Pickup</p>
+                    <p className="text-sm font-bold text-navy-900">{load.pickup_city}</p>
+                    {load.pickup_address && (
+                      <p className="text-sm text-green-800 mt-0.5">{load.pickup_address}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-3.5 bg-red-50">
+                  <MapPin size={15} className="text-red-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-0.5">Delivery</p>
+                    <p className="text-sm font-bold text-navy-900">{load.delivery_city}</p>
+                    {load.delivery_address && (
+                      <p className="text-sm text-red-700 mt-0.5">{load.delivery_address}</p>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
@@ -95,7 +112,9 @@ export default function LoadDetails() {
             </div>
 
             {/* Map */}
-            <MapView markers={markers} routes={routes} style={{ height: '350px' }} />
+            <div className="h-[220px] lg:h-[350px]">
+              <MapView markers={markers} routes={routes} style={{ height: '100%' }} />
+            </div>
           </div>
 
           {/* Sidebar */}
@@ -114,9 +133,9 @@ export default function LoadDetails() {
               </div>
             </div>
 
-            {/* Accept */}
+            {/* Accept — desktop sidebar */}
             {load.status === 'open' && (
-              <div className="card text-center" style={{ border: '1.5px solid var(--accent)', background: 'var(--accent-subtle)' }}>
+              <div className="hidden lg:block card text-center" style={{ border: '1.5px solid var(--accent)', background: 'var(--accent-subtle)' }}>
                 <p className="text-xs uppercase tracking-wider font-semibold mb-1" style={{ color: 'var(--accent)' }}>Offered Price</p>
                 <p className="text-3xl font-black mb-1" style={{ color: 'var(--accent)' }}>
                   ₹{Number(load.offered_price).toLocaleString('en-IN')}
@@ -135,6 +154,27 @@ export default function LoadDetails() {
           </div>
         </div>
       </div>
+
+      {/* Mobile sticky accept bar */}
+      {load.status === 'open' && (
+        <div className="lg:hidden fixed bottom-16 left-0 right-0 z-40 px-4 pb-3 pt-2 bg-white border-t border-slate-200 shadow-lg">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs text-slate-400">Pickup · {load.pickup_city}</p>
+              {load.pickup_address
+                ? <p className="text-xs font-semibold text-navy-900 truncate">{load.pickup_address}</p>
+                : <p className="text-lg font-black" style={{ color: 'var(--accent)' }}>₹{Number(load.offered_price).toLocaleString('en-IN')}</p>
+              }
+            </div>
+            <button onClick={handleAccept} disabled={booking}
+              className="flex-1 py-3.5 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-60"
+              style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text, #0f172a)' }}
+            >
+              <CheckCircle size={17} /> {booking ? 'Booking…' : 'Accept Load'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

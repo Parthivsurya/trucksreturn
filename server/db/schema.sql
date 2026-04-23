@@ -126,6 +126,17 @@ CREATE TABLE IF NOT EXISTS rate_limits (
   expires_at TIMESTAMPTZ NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS notifications (
+  id         SERIAL PRIMARY KEY,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type       TEXT NOT NULL DEFAULT 'connect_request',
+  title      TEXT NOT NULL,
+  message    TEXT NOT NULL,
+  load_id    INTEGER REFERENCES loads(id) ON DELETE SET NULL,
+  is_read    BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_loads_status        ON loads(status);
 CREATE INDEX IF NOT EXISTS idx_loads_pickup         ON loads(pickup_lat, pickup_lng);
@@ -138,3 +149,5 @@ CREATE INDEX IF NOT EXISTS idx_users_role             ON users(role);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_hash    ON refresh_tokens(token_hash);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user    ON refresh_tokens(user_id);
 CREATE INDEX IF NOT EXISTS idx_rate_limits_expires    ON rate_limits(expires_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_user     ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_created  ON notifications(created_at DESC);

@@ -102,11 +102,13 @@ export default function LoadFinder() {
 
         {availability && (
           <div className="grid lg:grid-cols-5 gap-6">
-            <div className="lg:col-span-2">
-              <MapView markers={markers} routes={routes} className="lg:sticky lg:top-24" style={{ height: '600px' }} />
+            <div className="order-2 lg:order-1 lg:col-span-2">
+              <div className="h-[220px] lg:h-[600px] lg:sticky lg:top-24">
+                <MapView markers={markers} routes={routes} style={{ height: '100%' }} />
+              </div>
             </div>
 
-            <div className="lg:col-span-3">
+            <div className="order-1 lg:order-2 lg:col-span-3">
               {loading ? (
                 <div className="space-y-4">
                   {[1, 2, 3].map(i => (

@@ -14,7 +14,8 @@ import loadRoutes     from './routes/load.routes.js';
 import bookingRoutes  from './routes/booking.routes.js';
 import uploadRoutes   from './routes/upload.routes.js';
 import adminRoutes    from './routes/admin.routes.js';
-import settingsRoutes from './routes/settings.routes.js';
+import settingsRoutes      from './routes/settings.routes.js';
+import notificationRoutes  from './routes/notification.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -95,7 +96,8 @@ app.use('/api/loads',     loadRoutes);
 app.use('/api/bookings',  bookingRoutes);
 app.use('/api/documents', uploadRoutes);
 app.use('/api/admin',     adminRoutes);
-app.use('/api/settings',  settingsRoutes);
+app.use('/api/settings',       settingsRoutes);
+app.use('/api/notifications',  notificationRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {

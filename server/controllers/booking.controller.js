@@ -81,6 +81,14 @@ export async function updateBookingStatus(req, res) {
     const loadStatus = status === 'delivered' ? 'delivered' : status === 'cancelled' ? 'open' : 'in_transit';
     await pool.query('UPDATE loads SET status = $1 WHERE id = $2', [loadStatus, booking.load_id]);
 
+    // If driver cancels, free up their availability so they can take other loads
+    if (status === 'cancelled') {
+      await pool.query(
+        "UPDATE driver_availability SET status = 'active' WHERE user_id = $1 AND status = 'matched'",
+        [booking.driver_id]
+      );
+    }
+
     const { rows: [updated] } = await pool.query(`
       SELECT b.*, l.pickup_city, l.delivery_city, l.cargo_type, l.weight_tons,
              l.pickup_lat, l.pickup_lng, l.delivery_lat, l.delivery_lng
@@ -89,10 +97,27 @@ export async function updateBookingStatus(req, res) {
 
     res.json({ booking: updated });
 
-    // Fire-and-forget emails
+    // In-app notification for shipper + fire-and-forget emails
     const { rows: [fullLoad] } = await pool.query('SELECT * FROM loads WHERE id = $1', [booking.load_id]);
     const { rows: [driver] }   = await pool.query('SELECT id, name, email FROM users WHERE id = $1', [booking.driver_id]);
     const { rows: [shipper] }  = await pool.query('SELECT id, name, email FROM users WHERE id = $1', [booking.shipper_id]);
+
+    const shipperNotifications = {
+      picked_up:  { title: 'Load Picked Up', message: `${driver.name} has picked up your load: ${updated.cargo_type} (${updated.pickup_city} → ${updated.delivery_city}). It is on its way!` },
+      in_transit: { title: 'Load In Transit', message: `Your load ${updated.cargo_type} (${updated.pickup_city} → ${updated.delivery_city}) is now in transit with ${driver.name}.` },
+      delivered:  { title: '✅ Load Delivered!', message: `${driver.name} has successfully delivered your load: ${updated.cargo_type} to ${updated.delivery_city}. Please rate your experience.` },
+      cancelled:  { title: 'Driver Dropped the Load', message: `${driver.name} had to drop your load: ${updated.cargo_type} (${updated.pickup_city} → ${updated.delivery_city}). It is now available for other drivers.` },
+    };
+
+    const notif = shipperNotifications[status];
+    if (notif) {
+      pool.query(
+        `INSERT INTO notifications (user_id, type, title, message, load_id)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [booking.shipper_id, `delivery_${status}`, notif.title, notif.message, booking.load_id]
+      ).catch(() => {});
+    }
+
     Promise.all([
       sendBookingStatusUpdate({ booking, load: fullLoad, newStatus: status, toUser: driver,  role: 'driver'  }),
       sendBookingStatusUpdate({ booking, load: fullLoad, newStatus: status, toUser: shipper, role: 'shipper' }),
@@ -107,6 +132,7 @@ export async function getBookingById(req, res) {
     const { rows: [booking] } = await pool.query(`
       SELECT b.*, l.pickup_city, l.delivery_city, l.cargo_type, l.weight_tons, l.description,
              l.pickup_lat, l.pickup_lng, l.delivery_lat, l.delivery_lng,
+             l.pickup_address, l.delivery_address, l.handling_instructions, l.offered_price,
              d.name as driver_name, d.avg_rating as driver_rating, d.phone as driver_phone,
              s.name as shipper_name, s.avg_rating as shipper_rating, s.phone as shipper_phone,
              t.truck_type, t.capacity_tons, t.registration_number

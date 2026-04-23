@@ -16,6 +16,7 @@ import SetAvailability from './pages/driver/SetAvailability.jsx';
 import LoadFinder from './pages/driver/LoadFinder.jsx';
 import LoadDetails from './pages/driver/LoadDetails.jsx';
 import DriverBookings from './pages/driver/Bookings.jsx';
+import BookingDetail from './pages/driver/BookingDetail.jsx';
 import RegisterTruck from './pages/driver/RegisterTruck.jsx';
 
 import ShipperDashboard from './pages/shipper/Dashboard.jsx';
@@ -67,6 +68,7 @@ function MainApp() {
         <Route path="/driver/find-loads" element={<ProtectedRoute role="driver"><RequiresTruck><LoadFinder /></RequiresTruck></ProtectedRoute>} />
         <Route path="/driver/loads/:id" element={<ProtectedRoute role="driver"><RequiresTruck><LoadDetails /></RequiresTruck></ProtectedRoute>} />
         <Route path="/driver/bookings" element={<ProtectedRoute role="driver"><RequiresTruck><DriverBookings /></RequiresTruck></ProtectedRoute>} />
+        <Route path="/driver/bookings/:id" element={<ProtectedRoute role="driver"><RequiresTruck><BookingDetail /></RequiresTruck></ProtectedRoute>} />
 
         {/* Shipper Routes */}
         <Route path="/shipper" element={<ProtectedRoute role="shipper"><ShipperDashboard /></ProtectedRoute>} />

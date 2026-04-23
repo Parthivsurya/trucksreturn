@@ -26,6 +26,7 @@ export default function PostLoad() {
   const [form, setForm] = useState({
     pickupCity: '', deliveryCity: '', cargo_type: '', weight_tons: '',
     description: '', handling_instructions: '', offered_price: '', timeline: '',
+    pickup_address: '', delivery_address: '',
   });
 
   function update(f, v) { setForm(prev => ({ ...prev, [f]: v })); }
@@ -50,6 +51,7 @@ export default function PostLoad() {
         cargo_type: form.cargo_type, weight_tons: parseFloat(form.weight_tons),
         description: form.description, handling_instructions: form.handling_instructions,
         offered_price: parseFloat(form.offered_price), timeline: form.timeline,
+        pickup_address: form.pickup_address, delivery_address: form.delivery_address,
       });
       toast.success('Load posted! Drivers will be matched.');
       navigate('/shipper/my-loads');
@@ -84,6 +86,23 @@ export default function PostLoad() {
                   <option value="">Select delivery</option>
                   {CITIES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
                 </select>
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-1.5">
+                  <MapPin size={13} className="text-green-600" /> Pickup Address
+                </label>
+                <input type="text" required value={form.pickup_address} onChange={e => update('pickup_address', e.target.value)}
+                  className="input-field" placeholder="e.g. Warehouse No. 4, MIDC, Andheri East" />
+              </div>
+              <div>
+                <label className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-1.5">
+                  <MapPin size={13} className="text-red-500" /> Delivery Address
+                </label>
+                <input type="text" value={form.delivery_address} onChange={e => update('delivery_address', e.target.value)}
+                  className="input-field" placeholder="e.g. Plot 12, Industrial Area, Sector 5" />
               </div>
             </div>
 
@@ -145,7 +164,9 @@ export default function PostLoad() {
           </form>
 
           <div className="lg:col-span-2">
-            <MapView markers={markers} routes={routes} className="lg:sticky lg:top-24" style={{ height: '500px' }} />
+            <div className="h-[220px] lg:h-[500px] lg:sticky lg:top-24">
+              <MapView markers={markers} routes={routes} style={{ height: '100%' }} />
+            </div>
           </div>
         </div>
       </div>

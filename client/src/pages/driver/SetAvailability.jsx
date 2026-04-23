@@ -124,7 +124,9 @@ export default function SetAvailability() {
           </form>
 
           {/* Map */}
-          <MapView markers={markers} routes={routes} style={{ height: '500px' }} />
+          <div className="h-[240px] lg:h-[500px]">
+            <MapView markers={markers} routes={routes} style={{ height: '100%' }} />
+          </div>
         </div>
       </div>
     </div>

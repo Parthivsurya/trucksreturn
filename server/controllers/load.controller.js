@@ -8,11 +8,12 @@ export async function createLoad(req, res) {
       pickup_lat, pickup_lng, delivery_lat, delivery_lng,
       pickup_city, delivery_city, cargo_type, weight_tons,
       description, handling_instructions, offered_price, timeline,
+      pickup_address, delivery_address,
     } = req.body;
 
     if (!pickup_lat || !pickup_lng || !delivery_lat || !delivery_lng ||
-        !pickup_city || !delivery_city || !cargo_type || !weight_tons || !offered_price) {
-      return res.status(400).json({ error: 'Missing required fields.' });
+        !pickup_city || !delivery_city || !cargo_type || !weight_tons || !offered_price || !pickup_address) {
+      return res.status(400).json({ error: 'Missing required fields. Pickup address is required.' });
     }
 
     const weightNum = parseFloat(weight_tons);
@@ -24,8 +25,9 @@ export async function createLoad(req, res) {
       `INSERT INTO loads
          (user_id, pickup_lat, pickup_lng, delivery_lat, delivery_lng,
           pickup_city, delivery_city, cargo_type, weight_tons,
-          description, handling_instructions, offered_price, timeline)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+          description, handling_instructions, offered_price, timeline,
+          pickup_address, delivery_address)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
       [
         req.user.id,
         parseFloat(pickup_lat), parseFloat(pickup_lng),
@@ -36,6 +38,8 @@ export async function createLoad(req, res) {
         handling_instructions?.trim() || null,
         priceNum,
         timeline?.trim() || null,
+        pickup_address?.trim() || null,
+        delivery_address?.trim() || null,
       ]
     );
     res.status(201).json({ load });
@@ -217,7 +221,19 @@ export async function connectDriver(req, res) {
       [req.user.id]
     );
 
-    await sendDriverConnectRequest({ driver, shipper, load });
+    // Save in-app notification for the driver
+    await pool.query(
+      `INSERT INTO notifications (user_id, type, title, message, load_id)
+       VALUES ($1, 'connect_request', $2, $3, $4)`,
+      [
+        driver.id,
+        `Load request from ${shipper.name}`,
+        `${shipper.name} wants you to take a load: ${load.cargo_type} from ${load.pickup_city} to ${load.delivery_city} — ₹${Number(load.offered_price).toLocaleString('en-IN')}`,
+        load.id,
+      ]
+    );
+
+    sendDriverConnectRequest({ driver, shipper, load }).catch(() => {});
     res.json({ message: `Request sent to ${driver.name}.` });
   } catch (err) {
     return serverError(res, err, 'load:connectDriver');

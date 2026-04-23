@@ -11,19 +11,19 @@ export default function StatCard({ icon: Icon, label, value, color = 'blue', pre
   const sc = !isAccent ? staticColors[color] : null;
 
   return (
-    <div className="stat-card">
+    <div className="stat-card !p-4">
       <div
-        className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+        className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0"
         style={isAccent
           ? { backgroundColor: 'var(--accent-subtle, rgba(25,118,210,0.12))', color: 'var(--accent, #1976D2)' }
           : { backgroundColor: sc?.bg, color: sc?.icon }
         }
       >
-        <Icon size={20} />
+        <Icon size={17} />
       </div>
       <div>
-        <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">{label}</p>
-        <p className="text-2xl font-bold text-navy-900 mt-0.5">
+        <p className="text-[10px] sm:text-xs text-slate-400 uppercase tracking-wider font-medium leading-tight">{label}</p>
+        <p className="text-lg sm:text-2xl font-bold text-navy-900 mt-0.5">
           {prefix}{typeof value === 'number' ? value.toLocaleString('en-IN') : value}
         </p>
       </div>

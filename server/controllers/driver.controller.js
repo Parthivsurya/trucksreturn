@@ -129,7 +129,7 @@ export async function getDriverBookings(req, res) {
 
     const { rows: bookings } = await pool.query(`
       SELECT b.*, l.pickup_city, l.delivery_city, l.cargo_type, l.weight_tons, l.description,
-             u.name as shipper_name, u.avg_rating as shipper_rating
+             u.name as shipper_name, u.avg_rating as shipper_rating, u.phone as shipper_phone
       FROM bookings b
       JOIN loads l ON b.load_id = l.id
       JOIN users u ON b.shipper_id = u.id

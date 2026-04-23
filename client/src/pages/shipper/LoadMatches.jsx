@@ -35,10 +35,10 @@ export default function LoadMatches() {
     setSending(true);
     try {
       const res = await api.post(`/loads/${id}/connect-driver`, { driver_id: confirm.user_id });
-      toast.success(res.message || `Request sent to ${confirm.driver_name}!`);
+      toast.success(`Request sent! ${confirm.driver_name} will see a notification in the app.`);
       setConfirm(null);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to send request');
+      toast.error(err.message || 'Failed to send request');
     }
     setSending(false);
   }

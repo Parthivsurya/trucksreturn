@@ -66,6 +66,10 @@ async function runMigrations() {
     ['security_rate_limit',      '1'],
     ['security_otp_required',    '1'],
   ];
+  // Add address columns to loads if not present
+  await pool.query('ALTER TABLE loads ADD COLUMN IF NOT EXISTS pickup_address TEXT');
+  await pool.query('ALTER TABLE loads ADD COLUMN IF NOT EXISTS delivery_address TEXT');
+
   for (const [key, value] of defaultSettings) {
     await pool.query(
       'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING',

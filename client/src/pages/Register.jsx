@@ -321,7 +321,7 @@ export default function Register() {
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* 6-box OTP input */}
-                <div className="flex gap-3 justify-center" onPaste={handleOtpPaste}>
+                <div className="flex gap-2 sm:gap-3 justify-center" onPaste={handleOtpPaste}>
                   {otp.map((digit, i) => (
                     <input
                       key={i}
@@ -332,7 +332,7 @@ export default function Register() {
                       value={digit}
                       onChange={e => handleOtpChange(i, e.target.value)}
                       onKeyDown={e => handleOtpKeyDown(i, e)}
-                      className="w-12 h-14 text-center text-xl font-black rounded-xl border-2 outline-none transition-all"
+                      className="w-10 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-black rounded-xl border-2 outline-none transition-all"
                       style={{
                         borderColor: digit ? accent : '#e2e8f0',
                         backgroundColor: digit ? `${accent}0d` : '#f8fafc',
