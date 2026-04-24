@@ -29,10 +29,10 @@ const STATUS_LABELS = {
 
 const STATUS_FLOW   = { confirmed: 'picked_up', picked_up: 'in_transit', in_transit: 'delivered' };
 const STATUS_ACTION = { confirmed: 'Mark Picked Up', picked_up: 'Mark In Transit', in_transit: 'Mark Delivered' };
-const CANCELLABLE   = ['confirmed', 'picked_up', 'in_transit'];
+const CANCELLABLE   = ['confirmed'];
 
 export default function BookingDetail() {
-  const { id } = useParams();
+  const { uuid } = useParams();
   const api = useApi();
   const navigate = useNavigate();
 
@@ -42,7 +42,7 @@ export default function BookingDetail() {
   const [cancelModal, setCancelModal] = useState(false);
   const [currentPos, setCurrentPos] = useState(null); // {lat, lng}
 
-  useEffect(() => { fetchBooking(); }, [id]);
+  useEffect(() => { fetchBooking(); }, [uuid]);
 
   // Get driver's current GPS location
   useEffect(() => {
@@ -55,7 +55,7 @@ export default function BookingDetail() {
 
   async function fetchBooking() {
     try {
-      const res = await api.get(`/bookings/${id}`);
+      const res = await api.get(`/bookings/${uuid}`);
       setBooking(res.booking);
     } catch {
       toast.error('Failed to load booking');
@@ -66,7 +66,7 @@ export default function BookingDetail() {
   async function updateStatus(status) {
     setUpdating(true);
     try {
-      await api.put(`/bookings/${id}/status`, { status });
+      await api.put(`/bookings/${uuid}/status`, { status });
       if (status === 'cancelled') {
         toast.success('Load dropped. It is now available for other drivers.');
         navigate('/driver/bookings');
@@ -132,7 +132,7 @@ export default function BookingDetail() {
             </div>
             <div>
               <h1 className="text-xl font-black text-navy-900">{booking.cargo_type}</h1>
-              <p className="text-xs text-slate-400 mt-0.5">Booking #{booking.id}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{booking.pickup_city} → {booking.delivery_city}</p>
             </div>
           </div>
           <span className={badge.color}>{badge.label}</span>
@@ -245,25 +245,27 @@ export default function BookingDetail() {
           </div>
         </div>
 
-        {/* Action buttons */}
-        {CANCELLABLE.includes(booking.status) && (
+        {/* Action buttons — show for all active (non-terminal) statuses */}
+        {STATUS_FLOW[booking.status] && (
           <div className="flex flex-col sm:flex-row gap-3">
-            {STATUS_FLOW[booking.status] && (
+            <button
+              onClick={() => updateStatus(STATUS_FLOW[booking.status])}
+              disabled={updating}
+              className="btn-primary flex-1 !py-3.5 flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              <CheckCircle size={16} /> {STATUS_ACTION[booking.status]}
+            </button>
+
+            {/* Drop Load — only allowed before pickup */}
+            {CANCELLABLE.includes(booking.status) && (
               <button
-                onClick={() => updateStatus(STATUS_FLOW[booking.status])}
+                onClick={() => setCancelModal(true)}
                 disabled={updating}
-                className="btn-primary flex-1 !py-3.5 flex items-center justify-center gap-2 disabled:opacity-60"
+                className="flex-1 !py-3.5 flex items-center justify-center gap-2 rounded-xl font-semibold border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-colors active:scale-[0.97] disabled:opacity-60"
               >
-                <CheckCircle size={16} /> {STATUS_ACTION[booking.status]}
+                <XCircle size={16} /> Drop Load
               </button>
             )}
-            <button
-              onClick={() => setCancelModal(true)}
-              disabled={updating}
-              className="flex-1 !py-3.5 flex items-center justify-center gap-2 rounded-xl font-semibold border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-colors active:scale-[0.97] disabled:opacity-60"
-            >
-              <XCircle size={16} /> Drop Load
-            </button>
           </div>
         )}
 

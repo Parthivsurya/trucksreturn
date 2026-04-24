@@ -64,10 +64,15 @@ const otpRules = [
   body('email').isEmail().normalizeEmail().withMessage('Valid email is required.'),
 ];
 
+const passwordRule = body('password')
+  .isLength({ min: 8 }).withMessage('Password must be at least 8 characters.')
+  .matches(/[A-Za-z]/).withMessage('Password must contain at least one letter.')
+  .matches(/[0-9]/).withMessage('Password must contain at least one number.');
+
 const registerRules = [
   body('name').trim().notEmpty().withMessage('Name is required.').isLength({ max: 100 }).withMessage('Name too long.'),
   body('email').isEmail().normalizeEmail().withMessage('Valid email is required.'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters.'),
+  passwordRule,
   body('role').isIn(['driver', 'shipper']).withMessage('Role must be driver or shipper.'),
   body('otp').notEmpty().withMessage('OTP is required.').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits.'),
   body('phone').optional().trim().isLength({ max: 20 }).withMessage('Phone number too long.'),
@@ -78,11 +83,17 @@ const loginRules = [
   body('password').notEmpty().withMessage('Password is required.'),
 ];
 
+const resetPasswordRules = [
+  body('email').isEmail().normalizeEmail().withMessage('Valid email is required.'),
+  body('otp').notEmpty().withMessage('OTP is required.').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits.'),
+  passwordRule,
+];
+
 router.post('/send-otp',       otpLimiter,      otpRules,      validate, sendOtp);
 router.post('/register',       registerLimiter, registerRules, validate, register);
 router.post('/login',          loginLimiter,    loginRules,    validate, login);
-router.post('/forgot-password', otpLimiter,     otpRules,      validate, forgotPassword);
-router.post('/reset-password', resetPassword);
+router.post('/forgot-password', otpLimiter,     otpRules,           validate, forgotPassword);
+router.post('/reset-password', otpLimiter,     resetPasswordRules, validate, resetPassword);
 router.post('/refresh',        refresh);
 router.post('/logout',         logout);
 router.get('/me',              authenticate, getMe);

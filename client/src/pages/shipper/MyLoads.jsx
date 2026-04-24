@@ -64,14 +64,14 @@ export default function MyLoads() {
             {filtered.map(load => (
               <div key={load.id}>
                 <LoadCard load={load} />
-                {load.status === 'open' && (
-                  <Link to={`/shipper/loads/${load.id}/matches`}
+                {load.status === 'open' && load.uuid && (
+                  <Link to={`/shipper/loads/${load.uuid}/matches`}
                     className="mt-2 block text-center text-sm text-navy-900 hover:underline py-2 bg-white border border-slate-200 rounded-xl">
                     View Matching Drivers →
                   </Link>
                 )}
-                {['booked', 'in_transit', 'picked_up'].includes(load.status) && (
-                  <Link to={`/shipper/tracking/${load.id}`}
+                {['booked', 'in_transit', 'picked_up'].includes(load.status) && load.booking_uuid && (
+                  <Link to={`/shipper/tracking/${load.booking_uuid}`}
                     className="mt-2 block text-center text-sm text-navy-900 hover:underline py-2 bg-white border border-slate-200 rounded-xl">
                     Track Shipment →
                   </Link>

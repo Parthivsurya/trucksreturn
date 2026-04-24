@@ -17,7 +17,7 @@ const __dirname  = path.dirname(__filename);
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' } : false,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
@@ -65,10 +65,19 @@ async function runMigrations() {
     ['email_on_load_status',     '1'],
     ['security_rate_limit',      '1'],
     ['security_otp_required',    '1'],
+    ['footer_color',             '#1e293b'],
   ];
   // Add address columns to loads if not present
   await pool.query('ALTER TABLE loads ADD COLUMN IF NOT EXISTS pickup_address TEXT');
   await pool.query('ALTER TABLE loads ADD COLUMN IF NOT EXISTS delivery_address TEXT');
+  // Add uuid to bookings for non-guessable public URLs
+  await pool.query('ALTER TABLE bookings ADD COLUMN IF NOT EXISTS uuid UUID DEFAULT gen_random_uuid()');
+  await pool.query("UPDATE bookings SET uuid = gen_random_uuid() WHERE uuid IS NULL");
+  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_uuid ON bookings(uuid)');
+  // Add uuid to loads for non-guessable public URLs
+  await pool.query('ALTER TABLE loads ADD COLUMN IF NOT EXISTS uuid UUID DEFAULT gen_random_uuid()');
+  await pool.query("UPDATE loads SET uuid = gen_random_uuid() WHERE uuid IS NULL");
+  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_loads_uuid ON loads(uuid)');
 
   for (const [key, value] of defaultSettings) {
     await pool.query(

@@ -7,7 +7,7 @@ import { ArrowLeft, Truck, MapPin, ArrowRight, Send, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function LoadMatches() {
-  const { id } = useParams();
+  const { uuid } = useParams();
   const api = useApi();
   const { settings } = useSettings();
   const primary = settings.primary_color || '#0f172a';
@@ -19,11 +19,11 @@ export default function LoadMatches() {
   const [confirm, setConfirm]     = useState(null);   // driver object to confirm
   const [sending, setSending]     = useState(false);
 
-  useEffect(() => { fetchMatches(); }, [id]);
+  useEffect(() => { fetchMatches(); }, [uuid]);
 
   async function fetchMatches() {
     try {
-      const res = await api.get(`/loads/${id}/matches`);
+      const res = await api.get(`/loads/${uuid}/matches`);
       setDrivers(res.drivers || []);
       setLoad(res.load);
     } catch (err) {}
@@ -34,7 +34,7 @@ export default function LoadMatches() {
     if (!confirm) return;
     setSending(true);
     try {
-      const res = await api.post(`/loads/${id}/connect-driver`, { driver_id: confirm.user_id });
+      const res = await api.post(`/loads/${uuid}/connect-driver`, { driver_id: confirm.user_id });
       toast.success(`Request sent! ${confirm.driver_name} will see a notification in the app.`);
       setConfirm(null);
     } catch (err) {

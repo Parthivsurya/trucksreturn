@@ -196,11 +196,11 @@ export default function Navbar() {
                                     <span className="text-[10px] text-slate-400">
                                       {new Date(n.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                                     </span>
-                                    {n.load_id && (
+                                    {n.load_uuid && (
                                       <Link
                                         to={user?.role === 'shipper'
-                                          ? `/shipper/loads/${n.load_id}/matches`
-                                          : `/driver/loads/${n.load_id}`}
+                                          ? `/shipper/loads/${n.load_uuid}/matches`
+                                          : `/driver/loads/${n.load_uuid}`}
                                         onClick={() => setNotifOpen(false)}
                                         className="text-[10px] font-bold hover:underline"
                                         style={{ color: 'var(--accent, #f59e0b)' }}

@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi.js';
 import { useAuth } from '../../context/AuthContext.jsx';
-import StatCard from '../../components/StatCard.jsx';
 import LoadCard from '../../components/LoadCard.jsx';
-import { Package, IndianRupee, BookOpen, Truck, PlusCircle, List, ArrowRight } from 'lucide-react';
+import { Package, Truck, PlusCircle, List, ArrowRight } from 'lucide-react';
 
 export default function ShipperDashboard() {
   const { user } = useAuth();
@@ -44,11 +43,18 @@ export default function ShipperDashboard() {
         </div>
 
         {stats && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <StatCard icon={Package}      label="Total Loads"   value={stats.totalLoads}    color="blue" />
-            <StatCard icon={Truck}        label="Active Loads"  value={stats.activeLoads}   color="green" />
-            <StatCard icon={BookOpen}     label="Bookings"      value={stats.totalBookings} color="amber" />
-            <StatCard icon={IndianRupee}  label="Total Spent"   value={stats.totalSpent}    color="purple" prefix="₹" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 mb-8 border-y border-slate-200 divide-x divide-slate-200">
+            {[
+              { label: 'Total Loads',  value: stats.totalLoads },
+              { label: 'Active Loads', value: stats.activeLoads },
+              { label: 'Bookings',     value: stats.totalBookings },
+              { label: 'Total Spent',  value: `₹${Number(stats.totalSpent).toLocaleString('en-IN')}` },
+            ].map((s, i) => (
+              <div key={i} className="py-5 px-4 sm:px-6">
+                <p className="text-2xl sm:text-3xl font-black text-navy-900 tracking-tight">{s.value}</p>
+                <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-medium">{s.label}</p>
+              </div>
+            ))}
           </div>
         )}
 

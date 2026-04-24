@@ -7,18 +7,18 @@ import { Package, MapPin, ArrowRight, Weight, IndianRupee, Clock, User, ArrowLef
 import toast from 'react-hot-toast';
 
 export default function LoadDetails() {
-  const { id } = useParams();
+  const { uuid } = useParams();
   const api = useApi();
   const navigate = useNavigate();
   const [load, setLoad] = useState(null);
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
 
-  useEffect(() => { loadData(); }, [id]);
+  useEffect(() => { loadData(); }, [uuid]);
 
   async function loadData() {
     try {
-      const res = await api.get(`/loads/${id}`);
+      const res = await api.get(`/loads/${uuid}`);
       setLoad(res.load);
     } catch (err) { toast.error('Failed to load details'); }
     setLoading(false);
@@ -27,7 +27,7 @@ export default function LoadDetails() {
   async function handleAccept() {
     setBooking(true);
     try {
-      await api.post('/bookings', { load_id: parseInt(id), agreed_price: load.offered_price });
+      await api.post('/bookings', { load_id: load.id, agreed_price: load.offered_price });
       toast.success('Booking confirmed! Load accepted.');
       navigate('/driver/bookings');
     } catch (err) {

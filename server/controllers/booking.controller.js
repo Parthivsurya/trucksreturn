@@ -63,7 +63,7 @@ export async function updateBookingStatus(req, res) {
       return res.status(400).json({ error: `Status must be one of: ${validStatuses.join(', ')}` });
     }
 
-    const { rows: [booking] } = await pool.query('SELECT * FROM bookings WHERE id = $1', [req.params.id]);
+    const { rows: [booking] } = await pool.query('SELECT * FROM bookings WHERE uuid = $1', [req.params.uuid]);
     if (!booking) return res.status(404).json({ error: 'Booking not found.' });
 
     if (booking.driver_id !== req.user.id && booking.shipper_id !== req.user.id) {
@@ -75,7 +75,7 @@ export async function updateBookingStatus(req, res) {
 
     await pool.query(
       'UPDATE bookings SET status=$1, picked_up_at=COALESCE($2,picked_up_at), delivered_at=COALESCE($3,delivered_at) WHERE id=$4',
-      [status, picked_up_at, delivered_at, req.params.id]
+      [status, picked_up_at, delivered_at, booking.id]
     );
 
     const loadStatus = status === 'delivered' ? 'delivered' : status === 'cancelled' ? 'open' : 'in_transit';
@@ -93,7 +93,7 @@ export async function updateBookingStatus(req, res) {
       SELECT b.*, l.pickup_city, l.delivery_city, l.cargo_type, l.weight_tons,
              l.pickup_lat, l.pickup_lng, l.delivery_lat, l.delivery_lng
       FROM bookings b JOIN loads l ON b.load_id = l.id WHERE b.id = $1
-    `, [req.params.id]);
+    `, [booking.id]);
 
     res.json({ booking: updated });
 
@@ -135,14 +135,15 @@ export async function getBookingById(req, res) {
              l.pickup_address, l.delivery_address, l.handling_instructions, l.offered_price,
              d.name as driver_name, d.avg_rating as driver_rating, d.phone as driver_phone,
              s.name as shipper_name, s.avg_rating as shipper_rating, s.phone as shipper_phone,
-             t.truck_type, t.capacity_tons, t.registration_number
+             t.truck_type, t.capacity_tons, t.registration_number,
+             EXISTS(SELECT 1 FROM ratings r WHERE r.booking_id = b.id AND r.from_user_id = $2) as has_rated
       FROM bookings b
       JOIN loads l ON b.load_id = l.id
       JOIN users d ON b.driver_id = d.id
       JOIN users s ON b.shipper_id = s.id
       LEFT JOIN trucks t ON t.user_id = b.driver_id
-      WHERE b.id = $1
-    `, [req.params.id]);
+      WHERE b.uuid = $1
+    `, [req.params.uuid, req.user.id]);
 
     if (!booking) return res.status(404).json({ error: 'Booking not found.' });
     if (booking.driver_id !== req.user.id && booking.shipper_id !== req.user.id) {
@@ -151,7 +152,7 @@ export async function getBookingById(req, res) {
 
     const { rows: tracking } = await pool.query(
       'SELECT * FROM tracking_updates WHERE booking_id = $1 ORDER BY created_at DESC',
-      [req.params.id]
+      [booking.id]
     );
 
     res.json({ booking, tracking });
@@ -170,14 +171,14 @@ export async function addTrackingUpdate(req, res) {
     if (isNaN(latNum) || isNaN(lngNum)) return res.status(400).json({ error: 'Invalid coordinates.' });
 
     const { rows: [booking] } = await pool.query(
-      'SELECT * FROM bookings WHERE id = $1 AND driver_id = $2',
-      [req.params.id, req.user.id]
+      'SELECT * FROM bookings WHERE uuid = $1 AND driver_id = $2',
+      [req.params.uuid, req.user.id]
     );
     if (!booking) return res.status(404).json({ error: 'Booking not found.' });
 
     await pool.query(
       'INSERT INTO tracking_updates (booking_id, lat, lng, status_message) VALUES ($1,$2,$3,$4)',
-      [req.params.id, latNum, lngNum, status_message?.trim() || null]
+      [booking.id, latNum, lngNum, status_message?.trim() || null]
     );
     res.status(201).json({ message: 'Tracking update recorded.' });
   } catch (err) {
@@ -194,8 +195,8 @@ export async function rateBooking(req, res) {
     }
 
     const { rows: [booking] } = await pool.query(
-      "SELECT * FROM bookings WHERE id = $1 AND status = 'delivered'",
-      [req.params.id]
+      "SELECT * FROM bookings WHERE uuid = $1 AND status = 'delivered'",
+      [req.params.uuid]
     );
     if (!booking) return res.status(404).json({ error: 'Booking not found or not delivered.' });
 
@@ -207,13 +208,13 @@ export async function rateBooking(req, res) {
 
     const { rows: [existing] } = await pool.query(
       'SELECT id FROM ratings WHERE booking_id = $1 AND from_user_id = $2',
-      [req.params.id, req.user.id]
+      [booking.id, req.user.id]
     );
     if (existing) return res.status(409).json({ error: 'Already rated this booking.' });
 
     await pool.query(
       'INSERT INTO ratings (booking_id, from_user_id, to_user_id, score, comment) VALUES ($1,$2,$3,$4,$5)',
-      [req.params.id, req.user.id, to_user_id, scoreNum, comment?.trim() || null]
+      [booking.id, req.user.id, to_user_id, scoreNum, comment?.trim() || null]
     );
 
     const { rows: [{ avg, cnt }] } = await pool.query(
@@ -240,7 +241,8 @@ export async function getShipperBookings(req, res) {
     const { rows: bookings } = await pool.query(`
       SELECT b.*, l.pickup_city, l.delivery_city, l.cargo_type, l.weight_tons,
              u.name as driver_name, u.avg_rating as driver_rating,
-             t.truck_type, t.registration_number
+             t.truck_type, t.registration_number,
+             EXISTS(SELECT 1 FROM ratings r WHERE r.booking_id = b.id AND r.from_user_id = $1) as has_rated
       FROM bookings b
       JOIN loads l ON b.load_id = l.id
       JOIN users u ON b.driver_id = u.id

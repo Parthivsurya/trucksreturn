@@ -122,7 +122,7 @@ export default function LoadFinder() {
               ) : filtered.length > 0 ? (
                 <div className="space-y-4">
                   {filtered.map(load => (
-                    <Link to={`/driver/loads/${load.id}`} key={load.id}>
+                    <Link to={`/driver/loads/${load.uuid}`} key={load.id}>
                       <LoadCard load={load} showDistance />
                     </Link>
                   ))}

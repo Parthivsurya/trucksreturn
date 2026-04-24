@@ -57,10 +57,9 @@ export async function uploadDocument(req, res) {
 
 export async function getUserDocuments(req, res) {
   try {
-    const userId = req.params.userId || req.user.id;
     const { rows: documents } = await pool.query(
       'SELECT * FROM documents WHERE user_id = $1 ORDER BY uploaded_at DESC',
-      [userId]
+      [req.user.id]
     );
     res.json({ documents });
   } catch (err) {

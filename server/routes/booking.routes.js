@@ -9,9 +9,9 @@ const router = Router();
 
 router.post('/', authenticate, authorizeRole('driver'), createBooking);
 router.get('/shipper', authenticate, authorizeRole('shipper'), getShipperBookings);
-router.get('/:id', authenticate, getBookingById);
-router.put('/:id/status', authenticate, updateBookingStatus);
-router.post('/:id/track', authenticate, authorizeRole('driver'), addTrackingUpdate);
-router.post('/:id/rate', authenticate, rateBooking);
+router.get('/:uuid', authenticate, getBookingById);
+router.put('/:uuid/status', authenticate, updateBookingStatus);
+router.post('/:uuid/track', authenticate, authorizeRole('driver'), addTrackingUpdate);
+router.post('/:uuid/rate', authenticate, rateBooking);
 
 export default router;

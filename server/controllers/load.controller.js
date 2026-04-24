@@ -86,8 +86,8 @@ export async function getLoadById(req, res) {
     const { rows: [load] } = await pool.query(`
       SELECT l.*, u.name as shipper_name, u.avg_rating as shipper_rating, u.phone as shipper_phone
       FROM loads l JOIN users u ON l.user_id = u.id
-      WHERE l.id = $1
-    `, [req.params.id]);
+      WHERE l.uuid = $1
+    `, [req.params.uuid]);
 
     if (!load) return res.status(404).json({ error: 'Load not found.' });
     res.json({ load });
@@ -99,8 +99,8 @@ export async function getLoadById(req, res) {
 export async function updateLoad(req, res) {
   try {
     const { rows: [load] } = await pool.query(
-      'SELECT * FROM loads WHERE id = $1 AND user_id = $2',
-      [req.params.id, req.user.id]
+      'SELECT * FROM loads WHERE uuid = $1 AND user_id = $2',
+      [req.params.uuid, req.user.id]
     );
     if (!load) return res.status(404).json({ error: 'Load not found or unauthorized.' });
     if (load.status !== 'open') return res.status(400).json({ error: 'Can only edit open loads.' });
@@ -123,11 +123,11 @@ export async function updateLoad(req, res) {
         handling_instructions?.trim()         || null,
         offered_price ? parseFloat(offered_price) : null,
         timeline?.trim()                      || null,
-        req.params.id,
+        load.id,
       ]
     );
 
-    const { rows: [updated] } = await pool.query('SELECT * FROM loads WHERE id = $1', [req.params.id]);
+    const { rows: [updated] } = await pool.query('SELECT * FROM loads WHERE id = $1', [load.id]);
     res.json({ load: updated });
   } catch (err) {
     return serverError(res, err, 'load:update');
@@ -137,12 +137,12 @@ export async function updateLoad(req, res) {
 export async function deleteLoad(req, res) {
   try {
     const { rows: [load] } = await pool.query(
-      'SELECT * FROM loads WHERE id = $1 AND user_id = $2',
-      [req.params.id, req.user.id]
+      'SELECT * FROM loads WHERE uuid = $1 AND user_id = $2',
+      [req.params.uuid, req.user.id]
     );
     if (!load) return res.status(404).json({ error: 'Load not found or unauthorized.' });
 
-    await pool.query("UPDATE loads SET status = 'cancelled' WHERE id = $1", [req.params.id]);
+    await pool.query("UPDATE loads SET status = 'cancelled' WHERE id = $1", [load.id]);
     res.json({ message: 'Load cancelled.' });
   } catch (err) {
     return serverError(res, err, 'load:delete');
@@ -157,7 +157,8 @@ export async function getMyLoads(req, res) {
 
     const { rows: loads } = await pool.query(`
       SELECT l.*,
-        (SELECT COUNT(*) FROM bookings b WHERE b.load_id = l.id) as booking_count
+        (SELECT COUNT(*) FROM bookings b WHERE b.load_id = l.id) as booking_count,
+        (SELECT b.uuid FROM bookings b WHERE b.load_id = l.id AND b.status NOT IN ('cancelled') ORDER BY b.booked_at DESC LIMIT 1) as booking_uuid
       FROM loads l
       WHERE l.user_id = $1
       ORDER BY l.created_at DESC
@@ -172,8 +173,8 @@ export async function getMyLoads(req, res) {
 export async function getLoadMatches(req, res) {
   try {
     const { rows: [load] } = await pool.query(
-      'SELECT * FROM loads WHERE id = $1 AND user_id = $2',
-      [req.params.id, req.user.id]
+      'SELECT * FROM loads WHERE uuid = $1 AND user_id = $2',
+      [req.params.uuid, req.user.id]
     );
     if (!load) return res.status(404).json({ error: 'Load not found.' });
 
@@ -204,8 +205,8 @@ export async function connectDriver(req, res) {
     if (!driver_id) return res.status(400).json({ error: 'driver_id is required.' });
 
     const { rows: [load] } = await pool.query(
-      'SELECT * FROM loads WHERE id = $1 AND user_id = $2',
-      [req.params.id, req.user.id]
+      'SELECT * FROM loads WHERE uuid = $1 AND user_id = $2',
+      [req.params.uuid, req.user.id]
     );
     if (!load) return res.status(404).json({ error: 'Load not found or unauthorized.' });
     if (load.status !== 'open') return res.status(400).json({ error: 'Load is no longer open.' });

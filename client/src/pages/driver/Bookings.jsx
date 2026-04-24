@@ -36,7 +36,7 @@ export default function DriverBookings() {
       await api.post(`/bookings/${ratingModal}/rate`, { score: ratingScore, comment: ratingComment });
       toast.success('Rating submitted!');
       setRatingModal(null); setRatingScore(0); setRatingComment('');
-      loadBookings();
+      loadBookings(); // refreshes has_rated flag
     } catch (err) { toast.error(err.message); }
   }
 
@@ -62,7 +62,7 @@ export default function DriverBookings() {
               return (
                 <div key={b.id} className="relative">
                   <Link
-                    to={`/driver/bookings/${b.id}`}
+                    to={`/driver/bookings/${b.uuid}`}
                     className="card-hover flex items-center gap-3 !p-4 group"
                   >
                     {/* Icon */}
@@ -74,7 +74,6 @@ export default function DriverBookings() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                         <span className="font-bold text-navy-900">{b.cargo_type}</span>
-                        <span className="text-slate-400 text-xs">#{b.id}</span>
                       </div>
                       <div className="flex items-center gap-1 text-sm flex-wrap">
                         <span className="text-green-700 truncate max-w-[90px]">{b.pickup_city}</span>
@@ -95,12 +94,14 @@ export default function DriverBookings() {
 
                   {/* Rate Shipper button — sits below the card link */}
                   {b.status === 'delivered' && (
-                    <button
-                      onClick={() => { setRatingModal(b.id); setRatingScore(0); setRatingComment(''); }}
-                      className="mt-1.5 w-full !py-2 text-sm flex items-center justify-center gap-1.5 rounded-xl font-semibold border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors active:scale-[0.97]"
-                    >
-                      <Star size={13} /> Rate Shipper
-                    </button>
+                    b.has_rated
+                      ? <p className="mt-1.5 w-full py-2 text-sm text-center text-slate-400 border border-slate-100 rounded-xl bg-slate-50">Rating submitted ✓</p>
+                      : <button
+                          onClick={() => { setRatingModal(b.uuid); setRatingScore(0); setRatingComment(''); }}
+                          className="mt-1.5 w-full !py-2 text-sm flex items-center justify-center gap-1.5 rounded-xl font-semibold border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors active:scale-[0.97]"
+                        >
+                          <Star size={13} /> Rate Shipper
+                        </button>
                   )}
                 </div>
               );

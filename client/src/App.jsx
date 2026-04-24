@@ -66,16 +66,16 @@ function MainApp() {
         <Route path="/driver/truck" element={<ProtectedRoute role="driver"><RegisterTruck /></ProtectedRoute>} />
         <Route path="/driver/availability" element={<ProtectedRoute role="driver"><RequiresTruck><SetAvailability /></RequiresTruck></ProtectedRoute>} />
         <Route path="/driver/find-loads" element={<ProtectedRoute role="driver"><RequiresTruck><LoadFinder /></RequiresTruck></ProtectedRoute>} />
-        <Route path="/driver/loads/:id" element={<ProtectedRoute role="driver"><RequiresTruck><LoadDetails /></RequiresTruck></ProtectedRoute>} />
+        <Route path="/driver/loads/:uuid" element={<ProtectedRoute role="driver"><RequiresTruck><LoadDetails /></RequiresTruck></ProtectedRoute>} />
         <Route path="/driver/bookings" element={<ProtectedRoute role="driver"><RequiresTruck><DriverBookings /></RequiresTruck></ProtectedRoute>} />
-        <Route path="/driver/bookings/:id" element={<ProtectedRoute role="driver"><RequiresTruck><BookingDetail /></RequiresTruck></ProtectedRoute>} />
+        <Route path="/driver/bookings/:uuid" element={<ProtectedRoute role="driver"><RequiresTruck><BookingDetail /></RequiresTruck></ProtectedRoute>} />
 
         {/* Shipper Routes */}
         <Route path="/shipper" element={<ProtectedRoute role="shipper"><ShipperDashboard /></ProtectedRoute>} />
         <Route path="/shipper/post-load" element={<ProtectedRoute role="shipper"><PostLoad /></ProtectedRoute>} />
         <Route path="/shipper/my-loads" element={<ProtectedRoute role="shipper"><MyLoads /></ProtectedRoute>} />
-        <Route path="/shipper/loads/:id/matches" element={<ProtectedRoute role="shipper"><LoadMatches /></ProtectedRoute>} />
-        <Route path="/shipper/tracking/:id" element={<ProtectedRoute role="shipper"><Tracking /></ProtectedRoute>} />
+        <Route path="/shipper/loads/:uuid/matches" element={<ProtectedRoute role="shipper"><LoadMatches /></ProtectedRoute>} />
+        <Route path="/shipper/tracking/:uuid" element={<ProtectedRoute role="shipper"><Tracking /></ProtectedRoute>} />
 
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

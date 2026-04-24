@@ -58,7 +58,7 @@ export async function sendOtp(req, res) {
       return res.status(409).json({ error: `Email already registered as a ${roleLabel}.` });
     }
 
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const otp = String(crypto.randomInt(100000, 999999));
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
 
     await pool.query(
@@ -78,7 +78,10 @@ export async function sendOtp(req, res) {
       return res.json({ message: 'OTP sent to your email.' });
     }
 
-    // OTP enforcement disabled (testing mode) — return OTP directly
+    // OTP enforcement disabled (testing mode) — return OTP directly (dev only)
+    if (isProd) {
+      return res.status(503).json({ error: 'Email service unavailable. Contact support.' });
+    }
     console.warn(`[auth] OTP enforcement OFF — dev_otp exposed for ${email}`);
     res.json({ message: 'OTP enforcement disabled (testing mode).', dev_otp: otp });
   } catch (err) {
@@ -232,7 +235,7 @@ export async function forgotPassword(req, res) {
     // Don't reveal whether email exists — always respond the same way
     if (!user) return res.json({ message: 'If this email is registered, an OTP has been sent.' });
 
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const otp = String(crypto.randomInt(100000, 999999));
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     await pool.query(
@@ -252,6 +255,9 @@ export async function forgotPassword(req, res) {
       return res.json({ message: 'OTP sent to your email.' });
     }
 
+    if (isProd) {
+      return res.status(503).json({ error: 'Email service unavailable. Contact support.' });
+    }
     console.warn(`[auth] OTP enforcement OFF — dev_otp exposed for ${email}`);
     res.json({ message: 'OTP enforcement disabled (testing mode).', dev_otp: otp });
   } catch (err) {
@@ -266,8 +272,8 @@ export async function resetPassword(req, res) {
     if (!email || !otp || !password) {
       return res.status(400).json({ error: 'Email, OTP, and new password are required.' });
     }
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters.' });
     }
 
     const { rows: [token] } = await pool.query('SELECT * FROM otp_tokens WHERE email = $1', [email]);

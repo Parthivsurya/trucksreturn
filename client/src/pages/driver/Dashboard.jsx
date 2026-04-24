@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi.js';
 import { useAuth } from '../../context/AuthContext.jsx';
-import StatCard from '../../components/StatCard.jsx';
 import LoadCard from '../../components/LoadCard.jsx';
-import { Truck, IndianRupee, Star, BookOpen, MapPin, Search, ArrowRight, Navigation } from 'lucide-react';
+import { Truck, MapPin, Search, ArrowRight, Navigation } from 'lucide-react';
 
 export default function DriverDashboard() {
   const { user } = useAuth();
@@ -89,11 +88,18 @@ export default function DriverDashboard() {
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-            <StatCard icon={Truck}        label="Completed Trips"  value={stats.totalTrips}    color="blue" />
-            <StatCard icon={IndianRupee}  label="Total Earnings"   value={stats.totalEarnings} color="green" prefix="₹" />
-            <StatCard icon={BookOpen}     label="Active Bookings"  value={stats.activeBookings} color="amber" />
-            <StatCard icon={Star}         label="Rating"           value={stats.avgRating || 'New'} color="purple" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 mb-8 border-y border-slate-200 divide-x divide-slate-200">
+            {[
+              { label: 'Completed Trips',  value: stats.totalTrips },
+              { label: 'Total Earnings',   value: `₹${Number(stats.totalEarnings).toLocaleString('en-IN')}` },
+              { label: 'Active Bookings',  value: stats.activeBookings },
+              { label: 'Rating',           value: stats.avgRating ? `${stats.avgRating} ★` : 'New' },
+            ].map((s, i) => (
+              <div key={i} className="py-5 px-4 sm:px-6">
+                <p className="text-2xl sm:text-3xl font-black text-navy-900 tracking-tight">{s.value}</p>
+                <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-medium">{s.label}</p>
+              </div>
+            ))}
           </div>
         )}
 
@@ -142,7 +148,7 @@ export default function DriverDashboard() {
           {matches.length > 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {matches.slice(0, 6).map(load => (
-                <Link to={`/driver/loads/${load.id}`} key={load.id}>
+                <Link to={`/driver/loads/${load.uuid}`} key={load.id}>
                   <LoadCard load={load} showDistance />
                 </Link>
               ))}

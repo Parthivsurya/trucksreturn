@@ -4,7 +4,7 @@ import { serverError } from '../utils/errors.js';
 export async function getNotifications(req, res) {
   try {
     const { rows: notifications } = await pool.query(
-      `SELECT n.*, l.pickup_city, l.delivery_city, l.cargo_type, l.offered_price
+      `SELECT n.*, l.pickup_city, l.delivery_city, l.cargo_type, l.offered_price, l.uuid as load_uuid
        FROM notifications n
        LEFT JOIN loads l ON n.load_id = l.id
        WHERE n.user_id = $1

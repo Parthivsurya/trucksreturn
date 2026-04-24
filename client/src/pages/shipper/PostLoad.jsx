@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi.js';
 import MapView from '../../components/MapView.jsx';
@@ -30,14 +30,22 @@ export default function PostLoad() {
   });
 
   function update(f, v) { setForm(prev => ({ ...prev, [f]: v })); }
+
+  // Only recompute markers/routes when the city selection actually changes,
+  // not on every other form field keystroke.
+  const { markers, routes } = useMemo(() => {
+    const pickup   = CITIES.find(c => c.name === form.pickupCity);
+    const delivery = CITIES.find(c => c.name === form.deliveryCity);
+    const m = [];
+    const r = [];
+    if (pickup)             m.push({ lat: pickup.lat,   lng: pickup.lng,   type: 'pickup',   label: `Pickup: ${pickup.name}` });
+    if (delivery)           m.push({ lat: delivery.lat, lng: delivery.lng, type: 'delivery', label: `Delivery: ${delivery.name}` });
+    if (pickup && delivery) r.push({ from: [pickup.lat, pickup.lng], to: [delivery.lat, delivery.lng], color: '#16a34a' });
+    return { markers: m, routes: r };
+  }, [form.pickupCity, form.deliveryCity]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const pickup   = CITIES.find(c => c.name === form.pickupCity);
   const delivery = CITIES.find(c => c.name === form.deliveryCity);
-
-  const markers = [];
-  const routes  = [];
-  if (pickup)            markers.push({ lat: pickup.lat,   lng: pickup.lng,   type: 'pickup',   label: `Pickup: ${pickup.name}` });
-  if (delivery)          markers.push({ lat: delivery.lat, lng: delivery.lng, type: 'delivery', label: `Delivery: ${delivery.name}` });
-  if (pickup && delivery) routes.push({ from: [pickup.lat, pickup.lng], to: [delivery.lat, delivery.lng], color: '#16a34a' });
 
   async function handleSubmit(e) {
     e.preventDefault();

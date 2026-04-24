@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -68,7 +69,23 @@ if (isProd) {
 }
 
 // Security & utility middleware
-app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(helmet({
+  crossOriginResourcePolicy: false,           // allow /uploads images cross-origin
+  contentSecurityPolicy: isProd ? {
+    directives: {
+      defaultSrc:     ["'self'"],
+      scriptSrc:      ["'self'"],
+      styleSrc:       ["'self'", "'unsafe-inline'"],   // Tailwind inline styles
+      imgSrc:         ["'self'", 'data:', 'blob:', 'https://*.tile.openstreetmap.org', 'https://cdnjs.cloudflare.com'],
+      connectSrc:     ["'self'", 'https://router.project-osrm.org'],
+      fontSrc:        ["'self'", 'https://fonts.gstatic.com'],
+      frameSrc:       ["'none'"],
+      objectSrc:      ["'none'"],
+      upgradeInsecureRequests: isProd ? [] : null,
+    },
+  } : false,
+  hsts: isProd ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
+}));
 app.use(cors({
   origin: process.env.ALLOWED_ORIGIN || 'http://localhost:5173',
   credentials: true,
@@ -85,6 +102,27 @@ if (isProd) {
 app.use(cookieParser());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Global rate limiter — 200 requests per 15 min per IP across all API routes
+app.use('/api', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please slow down.' },
+}));
+
+// Stricter limiter for write operations (post load, book, track)
+const writeLimiter = rateLimit({
+  windowMs: 60 * 1000,   // 1 minute
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please wait a moment.' },
+});
+app.use('/api/loads',           writeLimiter);
+app.use('/api/bookings',        writeLimiter);
+app.use('/api/drivers/availability', writeLimiter);
 
 // Static uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -145,7 +183,7 @@ app.use((err, req, res, next) => {
 const server = await (async () => {
   await initializeDatabase();
   await seedDatabase();
-  return app.listen(PORT, () => {
+  const httpServer = app.listen(PORT, () => {
     console.log(`🚛 ReturnLoad server running on http://localhost:${PORT}`);
     if (isProd) console.log(`📝 Logs → ${logsDir}`);
     if (hasClientBuild) {
@@ -154,6 +192,8 @@ const server = await (async () => {
       console.log('ℹ️  Run "cd ../client && npm run build" to serve the frontend from Express.');
     }
   });
+  httpServer.setTimeout(30_000); // 30 s request timeout — kills hung connections
+  return httpServer;
 })();
 
 // ── Graceful shutdown ─────────────────────────────────────────────────────────

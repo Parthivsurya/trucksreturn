@@ -7,7 +7,7 @@ import { ArrowLeft, Truck, CheckCircle, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Tracking() {
-  const { id } = useParams();
+  const { uuid } = useParams();
   const api = useApi();
   const [booking, setBooking] = useState(null);
   const [tracking, setTracking] = useState([]);
@@ -16,27 +16,23 @@ export default function Tracking() {
   const [ratingScore, setRatingScore] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
 
-  useEffect(() => { fetchBooking(); }, [id]);
+  useEffect(() => { fetchBooking(); }, [uuid]);
 
   async function fetchBooking() {
     try {
-      const shipperBookings = await api.get('/bookings/shipper');
-      const found = shipperBookings.bookings?.find(b => b.load_id === parseInt(id))
-                 || shipperBookings.bookings?.[0];
-      if (found) {
-        const res = await api.get(`/bookings/${found.id}`);
-        setBooking(res.booking);
-        setTracking(res.tracking || []);
-      }
+      const res = await api.get(`/bookings/${uuid}`);
+      setBooking(res.booking);
+      setTracking(res.tracking || []);
     } catch (err) {}
     setLoading(false);
   }
 
   async function submitRating() {
     try {
-      await api.post(`/bookings/${booking.id}/rate`, { score: ratingScore, comment: ratingComment });
+      await api.post(`/bookings/${uuid}/rate`, { score: ratingScore, comment: ratingComment });
       toast.success('Rating submitted!');
       setRatingModal(false);
+      fetchBooking(); // refreshes has_rated flag
     } catch (err) { toast.error(err.message); }
   }
 
@@ -150,10 +146,12 @@ export default function Tracking() {
             </div>
 
             {booking.status === 'delivered' && (
-              <button onClick={() => setRatingModal(true)}
-                className="btn-primary w-full flex items-center justify-center gap-2">
-                <Star size={15} /> Rate Driver
-              </button>
+              booking.has_rated
+                ? <p className="w-full py-3 text-sm text-center text-slate-400 border border-slate-100 rounded-xl bg-slate-50">Rating submitted ✓</p>
+                : <button onClick={() => setRatingModal(true)}
+                    className="btn-primary w-full flex items-center justify-center gap-2">
+                    <Star size={15} /> Rate Driver
+                  </button>
             )}
           </div>
         </div>

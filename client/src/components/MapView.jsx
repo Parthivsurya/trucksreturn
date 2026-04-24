@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -22,7 +22,6 @@ const truckIcon = new L.DivIcon({
   className: '', iconSize: [14, 14], iconAnchor: [7, 7],
 });
 
-// Fetch road path from OSRM (free, no API key needed)
 async function fetchRoadPath(from, to) {
   const [lat1, lng1] = from;
   const [lat2, lng2] = to;
@@ -34,10 +33,9 @@ async function fetchRoadPath(from, to) {
     if (!res.ok) return null;
     const data = await res.json();
     if (data.code === 'Ok' && data.routes?.[0]) {
-      // OSRM returns [lng, lat] — flip to Leaflet's [lat, lng]
       return data.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]);
     }
-  } catch { /* network error or timeout — fall back to straight line */ }
+  } catch { /* timeout or network error — fall back to straight line */ }
   return null;
 }
 
@@ -49,77 +47,104 @@ export default function MapView({
   className = '',
   style   = {},
 }) {
-  const mapRef      = useRef(null);
-  const mapInstance = useRef(null);
-  const [roadPaths, setRoadPaths] = useState([]);
+  const mapRef      = useRef(null);  // DOM node
+  const mapInstance = useRef(null);  // L.Map
+  const layerGroup  = useRef(null);  // L.LayerGroup for markers + polylines
 
-  // Serialise routes for stable comparison
-  const routeKey = JSON.stringify(routes.map(r => [r.from, r.to]));
-
-  // Fetch road geometries whenever route endpoints change
+  // ── Create the map exactly once ────────────────────────────────────────────
   useEffect(() => {
-    if (routes.length === 0) { setRoadPaths([]); return; }
-    let cancelled = false;
+    if (!mapRef.current || mapInstance.current) return;
 
-    (async () => {
-      const paths = await Promise.all(routes.map(r => fetchRoadPath(r.from, r.to)));
-      if (!cancelled) setRoadPaths(paths);
-    })();
-
-    return () => { cancelled = true; };
-  }, [routeKey]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Build / rebuild the Leaflet map
-  useEffect(() => {
-    if (!mapRef.current) return;
-
-    if (mapInstance.current) {
-      mapInstance.current.remove();
-    }
-
-    const map = L.map(mapRef.current, { center, zoom, zoomControl: true, attributionControl: true });
+    const map = L.map(mapRef.current, {
+      center, zoom, zoomControl: true, attributionControl: true,
+    });
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
       maxZoom: 19,
     }).addTo(map);
 
-    const bounds = [];
-
-    markers.forEach(m => {
-      const icon = m.type === 'pickup' ? pickupIcon : m.type === 'delivery' ? deliveryIcon : truckIcon;
-      const marker = L.marker([m.lat, m.lng], { icon }).addTo(map);
-      if (m.label) marker.bindPopup(`<b>${m.label}</b>`);
-      bounds.push([m.lat, m.lng]);
-    });
-
-    routes.forEach((r, i) => {
-      // Use real road path if available, otherwise fall back to a straight line
-      const coords = roadPaths[i] ?? [r.from, r.to];
-      L.polyline(coords, {
-        color:     r.color || '#0B2545',
-        weight:    4,
-        opacity:   0.75,
-        dashArray: r.dashed ? '10, 8' : null,
-        lineJoin:  'round',
-        lineCap:   'round',
-      }).addTo(map);
-      bounds.push(r.from, r.to);
-    });
-
-    if (bounds.length > 1) {
-      map.fitBounds(bounds, { padding: [40, 40] });
-    } else if (bounds.length === 1) {
-      map.setView(bounds[0], 10);
-    }
-
+    layerGroup.current = L.layerGroup().addTo(map);
     mapInstance.current = map;
 
     return () => {
       map.remove();
       mapInstance.current = null;
+      layerGroup.current  = null;
     };
-  }, [markers, routes, roadPaths, center, zoom]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Update layers whenever markers / routes change ─────────────────────────
+  useEffect(() => {
+    const map = mapInstance.current;
+    const lg  = layerGroup.current;
+    if (!map || !lg) return;
+
+    // Track whether this effect run was superseded
+    let cancelled = false;
+
+    async function redraw() {
+      // 1. Draw straight lines immediately so the map isn't empty while fetching
+      lg.clearLayers();
+
+      const bounds = [];
+
+      markers.forEach(m => {
+        const icon   = m.type === 'pickup' ? pickupIcon : m.type === 'delivery' ? deliveryIcon : truckIcon;
+        const marker = L.marker([m.lat, m.lng], { icon }).addTo(lg);
+        if (m.label) marker.bindPopup(`<b>${m.label}</b>`);
+        bounds.push([m.lat, m.lng]);
+      });
+
+      routes.forEach(r => {
+        L.polyline([r.from, r.to], {
+          color: r.color || '#0B2545', weight: 4, opacity: 0.5,
+          dashArray: r.dashed ? '10, 8' : null,
+        }).addTo(lg);
+        bounds.push(r.from, r.to);
+      });
+
+      fitBounds(map, bounds);
+
+      // 2. Fetch road paths and replace straight lines with real paths
+      if (routes.length === 0) return;
+
+      const paths = await Promise.all(routes.map(r => fetchRoadPath(r.from, r.to)));
+      if (cancelled) return;
+
+      // Redraw with road paths
+      lg.clearLayers();
+      const bounds2 = [];
+
+      markers.forEach(m => {
+        const icon   = m.type === 'pickup' ? pickupIcon : m.type === 'delivery' ? deliveryIcon : truckIcon;
+        const marker = L.marker([m.lat, m.lng], { icon }).addTo(lg);
+        if (m.label) marker.bindPopup(`<b>${m.label}</b>`);
+        bounds2.push([m.lat, m.lng]);
+      });
+
+      routes.forEach((r, i) => {
+        const coords = paths[i] ?? [r.from, r.to];
+        L.polyline(coords, {
+          color:     r.color || '#0B2545',
+          weight:    4,
+          opacity:   0.75,
+          dashArray: r.dashed ? '10, 8' : null,
+          lineJoin:  'round',
+          lineCap:   'round',
+        }).addTo(lg);
+        bounds2.push(r.from, r.to);
+      });
+
+      fitBounds(map, bounds2);
+    }
+
+    redraw();
+    return () => { cancelled = true; };
+  }, [ // eslint-disable-line react-hooks/exhaustive-deps
+    JSON.stringify(markers.map(m => [m.lat, m.lng, m.type, m.label])),
+    JSON.stringify(routes.map(r => [r.from, r.to, r.color, r.dashed])),
+  ]);
 
   return (
     <div
@@ -128,4 +153,12 @@ export default function MapView({
       style={{ height: '400px', overflow: 'hidden', isolation: 'isolate', ...style }}
     />
   );
+}
+
+function fitBounds(map, bounds) {
+  if (bounds.length > 1) {
+    map.fitBounds(bounds, { padding: [40, 40] });
+  } else if (bounds.length === 1) {
+    map.setView(bounds[0], 10);
+  }
 }
