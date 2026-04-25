@@ -7,7 +7,7 @@ import {
   getLoads, updateLoadStatus, createLoad, deleteLoad, batchDeleteLoads, getShippers,
   getBookings,
 } from '../controllers/admin.controller.js';
-import { updateSettings, testEmailEndpoint } from '../controllers/settings.controller.js';
+import { getAdminSettings, updateSettings, testEmailEndpoint } from '../controllers/settings.controller.js';
 
 const router = Router();
 
@@ -31,6 +31,7 @@ router.put('/loads/:id/status',  updateLoadStatus);
 router.delete('/loads/:id',      deleteLoad);
 router.get('/shippers',          getShippers);
 router.get('/bookings',          getBookings);
+router.get('/settings',          getAdminSettings);
 router.put('/settings',          updateSettings);
 router.post('/settings/test-email', testEmailEndpoint);
 

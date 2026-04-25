@@ -27,33 +27,34 @@ export default function AdminSettings() {
   const [testTo, setTestTo]     = useState('');
   const [testing, setTesting]   = useState(false);
 
+  // Load full settings from admin endpoint (includes sensitive keys not in public API)
   useEffect(() => {
-    if (settings.site_name !== undefined) {
+    api.get('/settings').then(data => {
       setForm({
-        site_name:       settings.site_name       || 'ReturnLoad',
-        logo_url:        settings.logo_url        || '',
-        primary_color:   settings.primary_color   || '#0f172a',
-        theme_preset:    settings.theme_preset    || 'freight',
-        smtp_enabled:    settings.smtp_enabled    || '0',
-        smtp_host:       settings.smtp_host       || '',
-        smtp_port:       settings.smtp_port       || '587',
-        smtp_secure:     settings.smtp_secure     || '0',
-        smtp_user:       settings.smtp_user       || '',
-        smtp_pass:       settings.smtp_pass       || '',
-        smtp_from_name:          settings.smtp_from_name          || '',
-        smtp_from_email:         settings.smtp_from_email         || '',
-        accent_color:            settings.accent_color            ?? '#1976D2',
-        footer_color:            settings.footer_color            ?? '#1e293b',
-        security_rate_limit:     settings.security_rate_limit     ?? '1',
-        security_otp_required:   settings.security_otp_required   ?? '1',
-        email_on_login:          settings.email_on_login          ?? '1',
-        email_on_booking_shipper:settings.email_on_booking_shipper ?? '1',
-        email_on_booking_driver: settings.email_on_booking_driver  ?? '1',
-        email_on_status_change:  settings.email_on_status_change  ?? '1',
-        email_on_load_status:    settings.email_on_load_status    ?? '1',
+        site_name:               data.site_name               || 'ReturnLoad',
+        logo_url:                data.logo_url                || '',
+        primary_color:           data.primary_color           || '#0f172a',
+        theme_preset:            data.theme_preset            || 'freight',
+        smtp_enabled:            data.smtp_enabled            || '0',
+        smtp_host:               data.smtp_host               || '',
+        smtp_port:               data.smtp_port               || '587',
+        smtp_secure:             data.smtp_secure             || '0',
+        smtp_user:               data.smtp_user               || '',
+        smtp_pass:               data.smtp_pass               || '',
+        smtp_from_name:          data.smtp_from_name          || '',
+        smtp_from_email:         data.smtp_from_email         || '',
+        accent_color:            data.accent_color            ?? '#f59e0b',
+        footer_color:            data.footer_color            ?? '#1e293b',
+        security_rate_limit:     data.security_rate_limit     ?? '1',
+        security_otp_required:   data.security_otp_required   ?? '1',
+        email_on_login:          data.email_on_login          ?? '1',
+        email_on_booking_shipper:data.email_on_booking_shipper ?? '1',
+        email_on_booking_driver: data.email_on_booking_driver  ?? '1',
+        email_on_status_change:  data.email_on_status_change  ?? '1',
+        email_on_load_status:    data.email_on_load_status    ?? '1',
       });
-    }
-  }, [settings]);
+    }).catch(() => {});
+  }, []);
 
   async function sendTest() {
     if (!testTo) return toast.error('Enter a recipient email address.');
