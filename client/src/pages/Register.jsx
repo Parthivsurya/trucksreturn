@@ -6,6 +6,14 @@ import { useApi } from '../hooks/useApi.js';
 import { Truck, Package, Mail, Lock, User, Phone, Eye, EyeOff, ArrowRight, ArrowLeft, CheckCircle, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+function validatePassword(password) {
+  if (!password) return '';
+  if (password.length < 8) return 'Password must be at least 8 characters.';
+  if (!/[A-Za-z]/.test(password)) return 'Password must contain at least one letter.';
+  if (!/[0-9]/.test(password)) return 'Password must contain at least one number.';
+  return '';
+}
+
 export default function Register() {
   const { register } = useAuth();
   const { settings }  = useSettings();
@@ -18,21 +26,40 @@ export default function Register() {
 
   const [step, setStep]        = useState(1);
   const [showPass, setShowPass] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading]  = useState(false);
-  const [form, setForm]        = useState({ name: '', email: '', phone: '', password: '', role: 'driver' });
+  const [form, setForm]        = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '', role: 'driver' });
   const [otp, setOtp]          = useState(['', '', '', '', '', '']);
-  const [emailError, setEmailError] = useState('');
-  const otpRefs                = useRef([]);
+  const [emailError, setEmailError]       = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmError, setConfirmError]   = useState('');
+  const otpRefs = useRef([]);
 
   function update(field, value) {
     if (field === 'email') setEmailError('');
+    if (field === 'password') {
+      setPasswordError(validatePassword(value));
+      if (form.confirmPassword) {
+        setConfirmError(value !== form.confirmPassword ? 'Passwords do not match.' : '');
+      }
+    }
+    if (field === 'confirmPassword') {
+      setConfirmError(value !== form.password ? 'Passwords do not match.' : '');
+    }
     setForm(prev => ({ ...prev, [field]: value }));
   }
 
-  // Step 2 → send OTP and advance to step 3
   async function handleSendOtp(e) {
     e.preventDefault();
     setEmailError('');
+
+    // Validate password before sending OTP
+    const pwErr = validatePassword(form.password);
+    if (pwErr) { setPasswordError(pwErr); return; }
+
+    if (!form.confirmPassword) { setConfirmError('Please confirm your password.'); return; }
+    if (form.password !== form.confirmPassword) { setConfirmError('Passwords do not match.'); return; }
+
     setLoading(true);
     try {
       const data = await api.post('/auth/send-otp', { email: form.email });
@@ -54,7 +81,6 @@ export default function Register() {
     }
   }
 
-  // Step 3 → verify OTP and register
   async function handleSubmit(e) {
     e.preventDefault();
     const otpValue = otp.join('');
@@ -142,7 +168,7 @@ export default function Register() {
             <span className="font-bold text-navy-900">{siteName}</span>
           </div>
 
-          {/* Step indicator — 3 bars */}
+          {/* Step indicator */}
           <div className="flex items-center gap-2 mb-6">
             {[1, 2, 3].map(n => (
               <div
@@ -161,8 +187,8 @@ export default function Register() {
 
               <div className="grid grid-cols-2 gap-4 mb-6">
                 {[
-                  { role: 'driver',  icon: Truck,    label: 'Truck Driver', sub: 'Find return loads' },
-                  { role: 'shipper', icon: Package,  label: 'Shipper',      sub: 'Send goods' },
+                  { role: 'driver',  icon: Truck,   label: 'Truck Driver', sub: 'Find return loads' },
+                  { role: 'shipper', icon: Package, label: 'Shipper',      sub: 'Send goods' },
                 ].map(({ role, icon: Icon, label, sub }) => {
                   const active = form.role === role;
                   return (
@@ -272,17 +298,47 @@ export default function Register() {
                   <label className="block text-sm font-medium text-slate-600 mb-1.5">Password</label>
                   <div className="relative">
                     <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input type={showPass ? 'text' : 'password'} required minLength={6}
-                      value={form.password} onChange={e => update('password', e.target.value)}
-                      className="input-field !pl-10 !pr-10" placeholder="Min. 6 characters" />
+                    <input
+                      type={showPass ? 'text' : 'password'}
+                      required
+                      value={form.password}
+                      onChange={e => update('password', e.target.value)}
+                      className={`input-field !pl-10 !pr-10 ${passwordError ? 'border-red-400 focus:border-red-400' : ''}`}
+                      placeholder="Min. 8 chars, letter + number"
+                    />
                     <button type="button" onClick={() => setShowPass(!showPass)}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                       {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
+                  {passwordError && (
+                    <span className="text-xs text-red-500 mt-1 block">{passwordError}</span>
+                  )}
                 </div>
 
-                <button type="submit" disabled={loading}
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1.5">Confirm Password</label>
+                  <div className="relative">
+                    <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type={showConfirm ? 'text' : 'password'}
+                      required
+                      value={form.confirmPassword}
+                      onChange={e => update('confirmPassword', e.target.value)}
+                      className={`input-field !pl-10 !pr-10 ${confirmError ? 'border-red-400 focus:border-red-400' : ''}`}
+                      placeholder="Re-enter your password"
+                    />
+                    <button type="button" onClick={() => setShowConfirm(!showConfirm)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  {confirmError && (
+                    <span className="text-xs text-red-500 mt-1 block">{confirmError}</span>
+                  )}
+                </div>
+
+                <button type="submit" disabled={loading || !!passwordError || !!confirmError}
                   className="w-full py-3.5 rounded-xl font-bold text-base transition-all duration-150 active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
                   style={{ backgroundColor: accent, color: primary }}
                   onMouseEnter={e => !loading && (e.currentTarget.style.filter = 'brightness(1.08)')}
@@ -320,7 +376,6 @@ export default function Register() {
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* 6-box OTP input */}
                 <div className="flex gap-2 sm:gap-3 justify-center" onPaste={handleOtpPaste}>
                   {otp.map((digit, i) => (
                     <input

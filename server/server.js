@@ -75,10 +75,10 @@ app.use(helmet({
     directives: {
       defaultSrc:     ["'self'"],
       scriptSrc:      ["'self'"],
-      styleSrc:       ["'self'", "'unsafe-inline'"],   // Tailwind inline styles
+      styleSrc:       ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       imgSrc:         ["'self'", 'data:', 'blob:', 'https://*.tile.openstreetmap.org', 'https://cdnjs.cloudflare.com'],
       connectSrc:     ["'self'", 'https://router.project-osrm.org'],
-      fontSrc:        ["'self'", 'https://fonts.gstatic.com'],
+      fontSrc:        ["'self'", 'https://fonts.gstatic.com', 'https://fonts.googleapis.com'],
       frameSrc:       ["'none'"],
       objectSrc:      ["'none'"],
       upgradeInsecureRequests: isProd ? [] : null,
