@@ -5,6 +5,7 @@ import pg from 'pg';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import bcrypt from 'bcryptjs';
 
 if (!process.env.DATABASE_URL) {
   console.error('FATAL: DATABASE_URL environment variable is not set. Refusing to start.');
@@ -86,6 +87,22 @@ async function runMigrations() {
     );
   }
   console.log('✅ Default settings ensured');
+
+  // Create/update admin user from environment variables
+  const adminEmail    = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (adminEmail && adminPassword) {
+    const hash = bcrypt.hashSync(adminPassword, 10);
+    await pool.query(
+      `INSERT INTO users (name, email, password_hash, role)
+       VALUES ('Admin', $1, $2, 'admin')
+       ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = 'admin'`,
+      [adminEmail, hash]
+    );
+    console.log(`✅ Admin user ensured: ${adminEmail}`);
+  } else {
+    console.warn('⚠️  ADMIN_EMAIL or ADMIN_PASSWORD not set — admin user not created/updated.');
+  }
 }
 
 export async function seedDatabase() {
