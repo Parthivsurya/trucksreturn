@@ -174,6 +174,9 @@ export async function sendBookingCreatedToShipper({ booking, load, driver, truck
   const { rows: [shipper] } = await pool.query('SELECT name, email FROM users WHERE id = $1', [load.user_id]);
   if (!shipper?.email) return;
 
+  const siteUrl = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
+  const trackingUrl = `${siteUrl}/shipper/tracking/${booking.uuid}`;
+
   await sendEmail({
     to: shipper.email,
     subject: `Driver booked your load — ${load.cargo_type} (${load.pickup_city} → ${load.delivery_city})`,
@@ -181,7 +184,7 @@ export async function sendBookingCreatedToShipper({ booking, load, driver, truck
       title: 'Your Load Has Been Booked!',
       body: `
         <p class="text">Hi <strong>${shipper.name}</strong>,</p>
-        <p class="text">Great news! A driver has booked your load. Here are the details:</p>
+        <p class="text">Great news! A driver has accepted your load. Here are the details:</p>
         <div class="info-box">
           <div class="info-row"><span class="info-label">Cargo</span><span class="info-value">${load.cargo_type} · ${load.weight_tons}t</span></div>
           <div class="info-row"><span class="info-label">Route</span><span class="info-value">${load.pickup_city} → ${load.delivery_city}</span></div>
@@ -190,7 +193,13 @@ export async function sendBookingCreatedToShipper({ booking, load, driver, truck
           <div class="info-row"><span class="info-label">Agreed Price</span><span class="info-value">₹${Number(booking.agreed_price).toLocaleString('en-IN')}</span></div>
           <div class="info-row"><span class="info-label">Status</span><span class="info-value">${statusBadge('confirmed')}</span></div>
         </div>
-        <p class="text">The driver will contact you to coordinate pickup. You can track the delivery from your dashboard.</p>
+        <p class="text">You can track the driver's live location in real-time from the tracking page. Location updates automatically every 30 seconds while the driver is active.</p>
+        <div style="text-align:center;margin:28px 0;">
+          <a href="${trackingUrl}" style="display:inline-block;background:${cfg.primary_color || '#0f172a'};color:#fff;font-weight:700;font-size:15px;padding:14px 32px;border-radius:12px;text-decoration:none;">
+            📍 Track Live Location
+          </a>
+        </div>
+        <p class="text" style="font-size:13px;color:#94a3b8;">Or copy this link: <a href="${trackingUrl}" style="color:${cfg.primary_color || '#0f172a'}">${trackingUrl}</a></p>
       `,
       siteName: cfg.site_name || 'ReturnLoad',
       primaryColor: cfg.primary_color || '#0f172a',
