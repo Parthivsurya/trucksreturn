@@ -18,8 +18,22 @@ const deliveryIcon = new L.DivIcon({
   className: '', iconSize: [12, 12], iconAnchor: [6, 6],
 });
 const truckIcon = new L.DivIcon({
-  html: '<div style="background:#0B2545;width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 8px rgba(11,37,69,0.4)"></div>',
-  className: '', iconSize: [14, 14], iconAnchor: [7, 7],
+  html: `<div style="
+    background:#0B2545;
+    width:36px;height:36px;
+    border-radius:10px;
+    border:2px solid white;
+    box-shadow:0 2px 8px rgba(11,37,69,0.45);
+    display:flex;align-items:center;justify-content:center;
+  ">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/>
+      <rect x="9" y="11" width="14" height="10" rx="2"/>
+      <circle cx="12" cy="21" r="1"/>
+      <circle cx="20" cy="21" r="1"/>
+    </svg>
+  </div>`,
+  className: '', iconSize: [36, 36], iconAnchor: [18, 18],
 });
 
 async function fetchRoadPath(from, to) {
