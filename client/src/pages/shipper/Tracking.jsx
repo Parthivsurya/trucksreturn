@@ -16,7 +16,17 @@ export default function Tracking() {
   const [ratingScore, setRatingScore] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
 
+  const ACTIVE_STATUSES = ['confirmed', 'picked_up', 'in_transit'];
+
   useEffect(() => { fetchBooking(); }, [uuid]);
+
+  // Auto-refresh location every 30s while booking is active
+  useEffect(() => {
+    if (!booking) return;
+    if (!ACTIVE_STATUSES.includes(booking.status)) return;
+    const interval = setInterval(fetchBooking, 30000);
+    return () => clearInterval(interval);
+  }, [booking?.status, uuid]);
 
   async function fetchBooking() {
     try {
@@ -66,7 +76,15 @@ export default function Tracking() {
           <ArrowLeft size={13} /> Back to My Loads
         </Link>
 
-        <h1 className="section-title mb-6">Shipment Tracking</h1>
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <h1 className="section-title !mb-0">Shipment Tracking</h1>
+          {ACTIVE_STATUSES.includes(booking.status) && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-green-50 border border-green-200 text-sm text-green-700 font-medium">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
+              Live · updates every 30s
+            </div>
+          )}
+        </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">

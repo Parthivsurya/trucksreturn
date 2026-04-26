@@ -36,22 +36,45 @@ export default function BookingDetail() {
   const api = useApi();
   const navigate = useNavigate();
 
-  const [booking, setBooking]       = useState(null);
-  const [loading, setLoading]       = useState(true);
-  const [updating, setUpdating]     = useState(false);
+  const [booking, setBooking]         = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [updating, setUpdating]       = useState(false);
   const [cancelModal, setCancelModal] = useState(false);
-  const [currentPos, setCurrentPos] = useState(null); // {lat, lng}
+  const [currentPos, setCurrentPos]   = useState(null);
+  const [tracking, setTracking]       = useState(false); // whether auto-GPS is running
+
+  const ACTIVE_STATUSES = ['confirmed', 'picked_up', 'in_transit'];
 
   useEffect(() => { fetchBooking(); }, [uuid]);
 
-  // Get driver's current GPS location
+  // Auto GPS tracking — sends location every 30s when booking is active
   useEffect(() => {
+    if (!booking) return;
+    if (!ACTIVE_STATUSES.includes(booking.status)) return;
     if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      pos => setCurrentPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {} // silent if denied
-    );
-  }, []);
+
+    setTracking(true);
+
+    // Send immediately on load
+    function sendLocation() {
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setCurrentPos({ lat, lng });
+        try {
+          await api.post(`/bookings/${uuid}/track`, { lat, lng, status_message: 'Auto GPS' });
+        } catch {} // silent — don't interrupt driver
+      }, () => {});
+    }
+
+    sendLocation();
+    const interval = setInterval(sendLocation, 30000);
+
+    return () => {
+      clearInterval(interval);
+      setTracking(false);
+    };
+  }, [booking?.status, uuid]);
 
   async function fetchBooking() {
     try {
@@ -137,6 +160,14 @@ export default function BookingDetail() {
           </div>
           <span className={badge.color}>{badge.label}</span>
         </div>
+
+        {/* Live GPS indicator */}
+        {tracking && (
+          <div className="mb-4 px-4 py-2.5 rounded-xl bg-green-50 border border-green-200 flex items-center gap-2 text-sm text-green-700 font-medium">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
+            Live location sharing active — shipper can see your location
+          </div>
+        )}
 
         {/* Distance summary bar */}
         <div className="card mb-5 !p-4">
