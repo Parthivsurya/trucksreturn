@@ -15,24 +15,37 @@ export default function Tracking() {
   const [ratingModal, setRatingModal] = useState(false);
   const [ratingScore, setRatingScore] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
+  const [lastUpdated, setLastUpdated] = useState(null); // Date of last fetch
+  const [secondsAgo, setSecondsAgo] = useState(0);
 
   const ACTIVE_STATUSES = ['confirmed', 'picked_up', 'in_transit'];
 
   useEffect(() => { fetchBooking(); }, [uuid]);
 
-  // Auto-refresh location every 30s while booking is active
+  // Auto-refresh every 15s while active
   useEffect(() => {
     if (!booking) return;
     if (!ACTIVE_STATUSES.includes(booking.status)) return;
-    const interval = setInterval(fetchBooking, 30000);
+    const interval = setInterval(fetchBooking, 15000);
     return () => clearInterval(interval);
   }, [booking?.status, uuid]);
+
+  // Seconds-ago counter — ticks every second
+  useEffect(() => {
+    if (!lastUpdated) return;
+    setSecondsAgo(0);
+    const tick = setInterval(() => {
+      setSecondsAgo(Math.floor((Date.now() - lastUpdated) / 1000));
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [lastUpdated]);
 
   async function fetchBooking() {
     try {
       const res = await api.get(`/bookings/${uuid}`);
       setBooking(res.booking);
       setTracking(res.tracking || []);
+      setLastUpdated(Date.now());
     } catch (err) {}
     setLoading(false);
   }
@@ -81,7 +94,7 @@ export default function Tracking() {
           {ACTIVE_STATUSES.includes(booking.status) && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-green-50 border border-green-200 text-sm text-green-700 font-medium">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
-              Live · updates every 30s
+              Live · updated {secondsAgo}s ago
             </div>
           )}
         </div>

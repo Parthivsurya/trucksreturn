@@ -68,7 +68,7 @@ export default function BookingDetail() {
     }
 
     sendLocation();
-    const interval = setInterval(sendLocation, 30000);
+    const interval = setInterval(sendLocation, 15000);
 
     return () => {
       clearInterval(interval);
