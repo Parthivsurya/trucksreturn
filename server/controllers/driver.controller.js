@@ -72,6 +72,10 @@ export async function broadcastAvailability(req, res) {
       if (truck && availableCap > truck.capacity_tons) {
         return res.status(400).json({ error: `Available capacity cannot exceed your truck's total capacity of ${truck.capacity_tons} tons.` });
       }
+      // If driver entered the full truck capacity as "partial", treat it as a full truck
+      if (truck && availableCap >= truck.capacity_tons) {
+        availableCap = null;
+      }
     }
 
     await pool.query(

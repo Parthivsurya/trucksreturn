@@ -61,7 +61,13 @@ export default function SetAvailability() {
       const val = parseFloat(partialTons);
       if (!partialTons || isNaN(val) || val <= 0) { toast.error('Enter a valid available capacity'); return; }
       if (truck && val > truck.capacity_tons) { toast.error(`Cannot exceed your truck's ${truck.capacity_tons} ton capacity`); return; }
-      available_capacity_tons = val;
+      // If they entered the full capacity, it's not partial — treat as full truck
+      if (truck && val >= truck.capacity_tons) {
+        toast('Full truck capacity entered — marking as Full Truck.', { icon: 'ℹ️' });
+        available_capacity_tons = null; // null = full truck on backend
+      } else {
+        available_capacity_tons = val;
+      }
     }
 
     setLoading(true);
@@ -175,17 +181,31 @@ export default function SetAvailability() {
                     />
                     <span className="text-sm text-amber-700 font-medium">tons available</span>
                   </div>
-                  {maxCap && partialTons && !isNaN(parseFloat(partialTons)) && (
-                    <div className="text-xs text-amber-700 flex items-center gap-2">
-                      <div className="flex-1 bg-amber-200 rounded-full h-2">
-                        <div
-                          className="bg-amber-500 h-2 rounded-full transition-all"
-                          style={{ width: `${Math.min(100, (parseFloat(partialTons) / maxCap) * 100)}%` }}
-                        />
+                  {maxCap && partialTons && !isNaN(parseFloat(partialTons)) && (() => {
+                    const val = parseFloat(partialTons);
+                    const isFull = val >= maxCap;
+                    return (
+                      <div className="space-y-1.5">
+                        <div className="text-xs flex items-center gap-2" style={{ color: isFull ? '#b45309' : '#92400e' }}>
+                          <div className="flex-1 bg-amber-200 rounded-full h-2">
+                            <div
+                              className="h-2 rounded-full transition-all"
+                              style={{
+                                width: `${Math.min(100, (val / maxCap) * 100)}%`,
+                                backgroundColor: isFull ? '#f59e0b' : '#d97706',
+                              }}
+                            />
+                          </div>
+                          <span>{val.toFixed(1)} / {maxCap} tons</span>
+                        </div>
+                        {isFull && (
+                          <p className="text-xs text-amber-700 font-medium">
+                            ⚠️ This equals your full capacity — will be treated as a full empty truck, not partial.
+                          </p>
+                        )}
                       </div>
-                      <span>{parseFloat(partialTons).toFixed(1)} / {maxCap} tons</span>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               )}
             </div>
