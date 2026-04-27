@@ -53,10 +53,17 @@ export default function LoadCard({ load, onClick, showDistance = false }) {
 
       {/* Match info for drivers */}
       {showDistance && load.pickup_distance_km !== undefined && (
-        <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-4 text-xs">
-          <span className="text-navy-600 font-medium">📍 {load.pickup_distance_km} km away</span>
-          <span className="text-amber-600">🔄 {load.detour_percent}% detour</span>
-          {load.shipper_name && <span className="text-slate-400">by {load.shipper_name}</span>}
+        <div className="mt-3 pt-3 border-t border-slate-100 space-y-1.5">
+          <div className="flex items-center gap-4 text-xs">
+            <span className="text-navy-600 font-medium">📍 {load.pickup_distance_km} km from route</span>
+            <span className="text-amber-600">🔄 {load.detour_percent}% detour</span>
+            {load.shipper_name && <span className="text-slate-400">by {load.shipper_name}</span>}
+          </div>
+          {load.is_intermediate && (
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-xs text-blue-700 font-medium">
+              🛣️ Intermediate stop · {load.route_progress_pct}% along your route
+            </div>
+          )}
         </div>
       )}
 
