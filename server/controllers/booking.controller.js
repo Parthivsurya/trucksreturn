@@ -24,8 +24,14 @@ export async function createBooking(req, res) {
     const { rows: [truck] } = await pool.query('SELECT * FROM trucks WHERE user_id = $1', [req.user.id]);
     if (!truck) return res.status(400).json({ error: 'Register your truck before accepting loads.' });
 
-    if (truck.capacity_tons < load.weight_tons) {
-      return res.status(400).json({ error: 'Your truck capacity is insufficient for this load.' });
+    // Fetch active availability to check declared free space (LTL support)
+    const { rows: [activeAvail] } = await pool.query(
+      "SELECT * FROM driver_availability WHERE user_id = $1 AND status = 'active' ORDER BY created_at DESC LIMIT 1",
+      [req.user.id]
+    );
+    const effectiveCapacity = activeAvail?.available_capacity_tons ?? truck.capacity_tons;
+    if (effectiveCapacity < load.weight_tons) {
+      return res.status(400).json({ error: `Insufficient available space. You have ${effectiveCapacity} tons free; this load needs ${load.weight_tons} tons.` });
     }
 
     const { rows: [newBooking] } = await pool.query(
@@ -34,7 +40,23 @@ export async function createBooking(req, res) {
     );
 
     await pool.query("UPDATE loads SET status = 'booked' WHERE id = $1", [load_id]);
-    await pool.query("UPDATE driver_availability SET status = 'matched' WHERE user_id = $1 AND status = 'active'", [req.user.id]);
+
+    // LTL: if driver declared partial capacity, deduct and keep active if space remains.
+    // Otherwise (full truck), mark matched immediately.
+    if (activeAvail?.available_capacity_tons !== null && activeAvail?.available_capacity_tons !== undefined) {
+      await pool.query(
+        `UPDATE driver_availability
+         SET available_capacity_tons = GREATEST(0, available_capacity_tons - $1),
+             status = CASE WHEN available_capacity_tons - $1 <= 0 THEN 'matched' ELSE 'active' END
+         WHERE user_id = $2 AND status = 'active'`,
+        [load.weight_tons, req.user.id]
+      );
+    } else {
+      await pool.query(
+        "UPDATE driver_availability SET status = 'matched' WHERE user_id = $1 AND status = 'active'",
+        [req.user.id]
+      );
+    }
 
     const { rows: [booking] } = await pool.query(`
       SELECT b.*, l.pickup_city, l.delivery_city, l.cargo_type, l.weight_tons

@@ -71,6 +71,9 @@ async function runMigrations() {
   // Add address columns to loads if not present
   await pool.query('ALTER TABLE loads ADD COLUMN IF NOT EXISTS pickup_address TEXT');
   await pool.query('ALTER TABLE loads ADD COLUMN IF NOT EXISTS delivery_address TEXT');
+  // Partial load / LTL support — available_capacity_tons on driver availability
+  // NULL means full truck available; a number means the driver has declared partial free space
+  await pool.query('ALTER TABLE driver_availability ADD COLUMN IF NOT EXISTS available_capacity_tons DOUBLE PRECISION');
   // Add uuid to bookings for non-guessable public URLs
   await pool.query('ALTER TABLE bookings ADD COLUMN IF NOT EXISTS uuid UUID DEFAULT gen_random_uuid()');
   await pool.query("UPDATE bookings SET uuid = gen_random_uuid() WHERE uuid IS NULL");

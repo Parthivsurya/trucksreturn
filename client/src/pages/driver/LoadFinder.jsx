@@ -52,12 +52,20 @@ export default function LoadFinder() {
               <Search size={26} className="text-navy-900" /> Return Load Finder
             </h1>
             {availability && (
-              <p className="section-subtitle flex items-center gap-2 mt-1">
+              <p className="section-subtitle flex items-center gap-2 mt-1 flex-wrap">
                 <span className="text-green-700 font-medium">{availability.current_city}</span>
                 <ArrowRight size={13} className="text-slate-400" />
                 <span className="text-red-600 font-medium">{availability.destination_city}</span>
                 <span className="text-slate-400">·</span>
                 <span>{filtered.length} loads found</span>
+                {availability.available_capacity_tons != null && (
+                  <>
+                    <span className="text-slate-400">·</span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-xs text-amber-700 font-medium">
+                      Partial · {availability.available_capacity_tons}t free
+                    </span>
+                  </>
+                )}
               </p>
             )}
           </div>

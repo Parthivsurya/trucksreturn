@@ -46,7 +46,7 @@ export async function getTruck(req, res) {
 
 export async function broadcastAvailability(req, res) {
   try {
-    const { current_lat, current_lng, dest_lat, dest_lng, current_city, destination_city, available_until } = req.body;
+    const { current_lat, current_lng, dest_lat, dest_lng, current_city, destination_city, available_until, available_capacity_tons } = req.body;
 
     if (!current_lat || !current_lng || !dest_lat || !dest_lng || !current_city || !destination_city) {
       return res.status(400).json({ error: 'Current and destination locations are required.' });
@@ -60,14 +60,30 @@ export async function broadcastAvailability(req, res) {
       return res.status(400).json({ error: 'Invalid coordinates.' });
     }
 
+    // Validate partial capacity if provided
+    let availableCap = null;
+    if (available_capacity_tons !== undefined && available_capacity_tons !== null && available_capacity_tons !== '') {
+      availableCap = parseFloat(available_capacity_tons);
+      if (isNaN(availableCap) || availableCap <= 0) {
+        return res.status(400).json({ error: 'Invalid available capacity.' });
+      }
+      // Validate against truck capacity
+      const { rows: [truck] } = await pool.query('SELECT capacity_tons FROM trucks WHERE user_id = $1', [req.user.id]);
+      if (truck && availableCap > truck.capacity_tons) {
+        return res.status(400).json({ error: `Available capacity cannot exceed your truck's total capacity of ${truck.capacity_tons} tons.` });
+      }
+    }
+
     await pool.query(
       "UPDATE driver_availability SET status = 'cancelled' WHERE user_id = $1 AND status = 'active'",
       [req.user.id]
     );
 
     const { rows: [availability] } = await pool.query(
-      'INSERT INTO driver_availability (user_id, current_lat, current_lng, dest_lat, dest_lng, current_city, destination_city, available_until) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',
-      [req.user.id, cLat, cLng, dLat, dLng, current_city.trim(), destination_city.trim(), available_until || null]
+      `INSERT INTO driver_availability
+         (user_id, current_lat, current_lng, dest_lat, dest_lng, current_city, destination_city, available_until, available_capacity_tons)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [req.user.id, cLat, cLng, dLat, dLng, current_city.trim(), destination_city.trim(), available_until || null, availableCap]
     );
     res.status(201).json({ availability });
   } catch (err) {

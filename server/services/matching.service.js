@@ -79,8 +79,11 @@ export async function findMatchingLoads(availability, truck, radiusKm = 50) {
       load.pickup_lng < minLng || load.pickup_lng > maxLng
     ) continue;
 
-    // ── Step 5: capacity check ─────────────────────────────────────────────
-    if (truck && truck.capacity_tons < load.weight_tons) continue;
+    // ── Step 5: capacity check — use declared available space (LTL support) ─
+    // If driver declared partial space (available_capacity_tons is set), use that.
+    // Otherwise fall back to full truck capacity.
+    const effectiveCapacity = availability.available_capacity_tons ?? truck?.capacity_tons;
+    if (effectiveCapacity !== undefined && effectiveCapacity !== null && effectiveCapacity < load.weight_tons) continue;
 
     // ── Step 6: detour calculation ─────────────────────────────────────────
     // Route: current → pickup → delivery → destination
@@ -100,14 +103,17 @@ export async function findMatchingLoads(availability, truck, radiusKm = 50) {
     // ── Step 8: determine if this is an intermediate or start-point match ──
     const isIntermediate = closestT > 0.1; // pickup is >10% along the route
 
+    const effectiveCapForResult = availability.available_capacity_tons ?? truck?.capacity_tons;
     matches.push({
       ...load,
-      pickup_distance_km:  Math.round(closestDist * 10) / 10,
-      detour_percent:      Math.round(detourPercent * 10) / 10,
-      total_route_km:      Math.round(viaLoadDistance * 10) / 10,
-      match_score:         Math.round(score * 100) / 100,
-      route_progress_pct:  Math.round(closestT * 100),  // how far along route the pickup is
-      is_intermediate:     isIntermediate,
+      pickup_distance_km:        Math.round(closestDist * 10) / 10,
+      detour_percent:            Math.round(detourPercent * 10) / 10,
+      total_route_km:            Math.round(viaLoadDistance * 10) / 10,
+      match_score:               Math.round(score * 100) / 100,
+      route_progress_pct:        Math.round(closestT * 100),
+      is_intermediate:           isIntermediate,
+      driver_available_capacity: effectiveCapForResult ?? null,
+      is_partial_space:          availability.available_capacity_tons !== null && availability.available_capacity_tons !== undefined,
     });
   }
 

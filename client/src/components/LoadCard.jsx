@@ -59,11 +59,18 @@ export default function LoadCard({ load, onClick, showDistance = false }) {
             <span className="text-amber-600">🔄 {load.detour_percent}% detour</span>
             {load.shipper_name && <span className="text-slate-400">by {load.shipper_name}</span>}
           </div>
-          {load.is_intermediate && (
-            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-xs text-blue-700 font-medium">
-              🛣️ Intermediate stop · {load.route_progress_pct}% along your route
-            </div>
-          )}
+          <div className="flex flex-wrap gap-1.5">
+            {load.is_intermediate && (
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-xs text-blue-700 font-medium">
+                🛣️ Intermediate stop · {load.route_progress_pct}% along route
+              </div>
+            )}
+            {load.is_partial_space && (
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-xs text-amber-700 font-medium">
+                📦 Partial space · {load.driver_available_capacity}t free
+              </div>
+            )}
+          </div>
         </div>
       )}
 

@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi.js';
 import MapView from '../../components/MapView.jsx';
-import { Navigation, MapPin, ArrowRight } from 'lucide-react';
+import { Navigation, MapPin, ArrowRight, Truck, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const CITIES = [
@@ -31,14 +31,20 @@ export default function SetAvailability() {
   const api = useApi();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [truck, setTruck] = useState(null);
   const [form, setForm] = useState({ currentCity: '', destinationCity: '' });
+  const [spaceMode, setSpaceMode] = useState('full'); // 'full' | 'partial'
+  const [partialTons, setPartialTons] = useState('');
+
+  useEffect(() => {
+    api.get('/drivers/truck').then(res => setTruck(res.truck)).catch(() => {});
+  }, []);
 
   const currentCityData = CITIES.find(c => c.name === form.currentCity);
   const destCityData    = CITIES.find(c => c.name === form.destinationCity);
 
   const markers = [];
   const routes  = [];
-
   if (currentCityData) markers.push({ lat: currentCityData.lat, lng: currentCityData.lng, type: 'truck',    label: `Current: ${currentCityData.name}` });
   if (destCityData)    markers.push({ lat: destCityData.lat,    lng: destCityData.lng,    type: 'delivery', label: `Destination: ${destCityData.name}` });
   if (currentCityData && destCityData) {
@@ -50,6 +56,14 @@ export default function SetAvailability() {
     if (!currentCityData || !destCityData) { toast.error('Select both cities'); return; }
     if (form.currentCity === form.destinationCity) { toast.error('Current and destination cannot be the same'); return; }
 
+    let available_capacity_tons = null;
+    if (spaceMode === 'partial') {
+      const val = parseFloat(partialTons);
+      if (!partialTons || isNaN(val) || val <= 0) { toast.error('Enter a valid available capacity'); return; }
+      if (truck && val > truck.capacity_tons) { toast.error(`Cannot exceed your truck's ${truck.capacity_tons} ton capacity`); return; }
+      available_capacity_tons = val;
+    }
+
     setLoading(true);
     try {
       await api.post('/drivers/availability', {
@@ -59,6 +73,7 @@ export default function SetAvailability() {
         dest_lng:         destCityData.lng,
         current_city:     currentCityData.name,
         destination_city: destCityData.name,
+        available_capacity_tons,
       });
       toast.success('Return route set! Finding matching loads…');
       navigate('/driver/find-loads');
@@ -68,6 +83,8 @@ export default function SetAvailability() {
       setLoading(false);
     }
   }
+
+  const maxCap = truck?.capacity_tons;
 
   return (
     <div className="page-container">
@@ -106,13 +123,83 @@ export default function SetAvailability() {
               </select>
             </div>
 
+            {/* Truck space selector */}
+            <div>
+              <label className="text-sm font-medium text-slate-600 mb-3 block">Available Truck Space</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSpaceMode('full')}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors ${
+                    spaceMode === 'full'
+                      ? 'border-navy-900 bg-navy-50 text-navy-900'
+                      : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                  }`}
+                >
+                  <Truck size={22} />
+                  <span className="text-sm font-semibold">Full Truck</span>
+                  {maxCap && <span className="text-xs opacity-70">{maxCap} tons free</span>}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSpaceMode('partial')}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors ${
+                    spaceMode === 'partial'
+                      ? 'border-amber-500 bg-amber-50 text-amber-700'
+                      : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                  }`}
+                >
+                  <Package size={22} />
+                  <span className="text-sm font-semibold">Partial Space</span>
+                  <span className="text-xs opacity-70">Truck is partly loaded</span>
+                </button>
+              </div>
+
+              {spaceMode === 'partial' && (
+                <div className="mt-3 p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-3">
+                  <p className="text-xs text-amber-700 font-medium">
+                    How many tons of free space do you have?
+                    {maxCap && <span className="ml-1 opacity-70">(max {maxCap} tons)</span>}
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min="0.5"
+                      max={maxCap || 100}
+                      step="0.5"
+                      value={partialTons}
+                      onChange={e => setPartialTons(e.target.value)}
+                      placeholder={`e.g. 5`}
+                      className="input-field !py-2 w-32 text-center text-lg font-bold"
+                      required={spaceMode === 'partial'}
+                    />
+                    <span className="text-sm text-amber-700 font-medium">tons available</span>
+                  </div>
+                  {maxCap && partialTons && !isNaN(parseFloat(partialTons)) && (
+                    <div className="text-xs text-amber-700 flex items-center gap-2">
+                      <div className="flex-1 bg-amber-200 rounded-full h-2">
+                        <div
+                          className="bg-amber-500 h-2 rounded-full transition-all"
+                          style={{ width: `${Math.min(100, (parseFloat(partialTons) / maxCap) * 100)}%` }}
+                        />
+                      </div>
+                      <span>{parseFloat(partialTons).toFixed(1)} / {maxCap} tons</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {currentCityData && destCityData && (
               <div className="p-4 rounded-xl bg-navy-50 border border-navy-200">
                 <p className="text-sm text-navy-900 font-medium">
                   Route: {form.currentCity} → {form.destinationCity}
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
-                  Loads within 50 km of this route will be shown
+                  {spaceMode === 'full'
+                    ? `Full truck — loads up to ${maxCap ?? '?'} tons will be shown`
+                    : `Partial space — loads up to ${partialTons || '?'} tons will be shown`
+                  }
                 </p>
               </div>
             )}
