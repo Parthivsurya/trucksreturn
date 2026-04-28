@@ -9,3 +9,6 @@ uploads/*
 *.docx
 *.pdf
 *.webp
+*.png
+*.jpg
+*.jpeg
