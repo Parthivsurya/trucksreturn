@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../db/db.js';
-import { sendLoadStatusUpdate } from '../services/email.service.js';
+import { sendLoadStatusUpdate, sendVerificationApproved, sendVerificationRejected } from '../services/email.service.js';
 
 if (!process.env.JWT_SECRET) {
   throw new Error('FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
@@ -497,7 +497,9 @@ export async function verifyDriver(req, res) {
     }
 
     const { rows: [truck] } = await pool.query(
-      'SELECT t.id, t.user_id FROM trucks t JOIN users u ON u.id = t.user_id WHERE t.user_id = $1 AND u.role = $2',
+      `SELECT t.id, t.user_id, u.name as driver_name, u.email as driver_email
+       FROM trucks t JOIN users u ON u.id = t.user_id
+       WHERE t.user_id = $1 AND u.role = $2`,
       [req.params.driverId, 'driver']
     );
     if (!truck) return res.status(404).json({ error: 'Driver or truck not found.' });
@@ -507,12 +509,17 @@ export async function verifyDriver(req, res) {
       [Number(is_verified), verification_note?.trim() || null, req.params.driverId]
     );
 
-    // Record rejection in history
+    const driver = { name: truck.driver_name, email: truck.driver_email };
+
+    // Record rejection in history + send email
     if (Number(is_verified) === 2) {
       await pool.query(
         "INSERT INTO verification_history (driver_id, action, note) VALUES ($1, 'rejected', $2)",
         [req.params.driverId, verification_note?.trim() || null]
       );
+      sendVerificationRejected({ driver, reason: verification_note?.trim() || null }).catch(() => {});
+    } else {
+      sendVerificationApproved({ driver }).catch(() => {});
     }
 
     const label = Number(is_verified) === 1 ? 'verified' : 'rejected';

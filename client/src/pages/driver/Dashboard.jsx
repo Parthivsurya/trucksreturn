@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import LoadCard from '../../components/LoadCard.jsx';
-import { Truck, MapPin, Search, ArrowRight, Navigation } from 'lucide-react';
+import { Truck, MapPin, Search, ArrowRight, Navigation, Clock, CheckCircle, XCircle } from 'lucide-react';
 
 export default function DriverDashboard() {
   const { user } = useAuth();
@@ -44,6 +44,44 @@ export default function DriverDashboard() {
             </Link>
           </div>
         </div>
+
+        {/* Verification Status Banner */}
+        {user?.truck && user.truck.is_verified !== 1 && (
+          <div className={`card mb-6 flex items-start gap-3 ${
+            user.truck.is_verified === 2
+              ? 'bg-red-50 border-red-200'
+              : 'bg-amber-50 border-amber-200'
+          }`}>
+            {user.truck.is_verified === 2
+              ? <XCircle size={20} className="text-red-500 shrink-0 mt-0.5" />
+              : <Clock size={20} className="text-amber-500 shrink-0 mt-0.5" />
+            }
+            <div className="flex-1 min-w-0">
+              <p className={`font-bold text-sm ${user.truck.is_verified === 2 ? 'text-red-700' : 'text-amber-700'}`}>
+                {user.truck.is_verified === 2
+                  ? 'Verification Rejected — Action Required'
+                  : 'Pending Admin Verification'}
+              </p>
+              <p className={`text-xs mt-0.5 ${user.truck.is_verified === 2 ? 'text-red-600' : 'text-amber-600'}`}>
+                {user.truck.is_verified === 2
+                  ? (user.truck.verification_note
+                      ? `Reason: ${user.truck.verification_note}`
+                      : 'Your documents were rejected. Please re-upload and resubmit.')
+                  : 'Your truck documents are under review. You cannot accept loads until an admin verifies them.'}
+              </p>
+            </div>
+            <Link
+              to="/driver/truck"
+              className={`shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg ${
+                user.truck.is_verified === 2
+                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                  : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+              }`}
+            >
+              {user.truck.is_verified === 2 ? 'Re-upload Docs' : 'View Details'}
+            </Link>
+          </div>
+        )}
 
         {/* Truck Registration Warning */}
         {!user?.truck && (

@@ -183,7 +183,7 @@ export async function getLoadMatches(req, res) {
 
     const { rows: drivers } = await pool.query(`
       SELECT da.*, u.name as driver_name, u.avg_rating, u.total_ratings,
-             t.truck_type, t.capacity_tons, t.registration_number,
+             t.truck_type, t.capacity_tons, t.registration_number, t.home_state,
              COALESCE(
                json_agg(
                  json_build_object('doc_type', d.doc_type, 'file_url', d.file_url)
@@ -200,7 +200,7 @@ export async function getLoadMatches(req, res) {
         AND ABS(da.current_lng - $3) < $4
         AND (t.capacity_tons IS NULL OR t.capacity_tons >= $5)
       GROUP BY da.id, u.name, u.avg_rating, u.total_ratings,
-               t.truck_type, t.capacity_tons, t.registration_number
+               t.truck_type, t.capacity_tons, t.registration_number, t.home_state
     `, [load.pickup_lat, degreeApprox, load.pickup_lng, degreeApprox, load.weight_tons]);
 
     res.json({ drivers, load });

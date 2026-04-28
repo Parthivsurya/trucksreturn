@@ -303,6 +303,56 @@ export async function sendDriverConnectRequest({ driver, shipper, load }) {
   });
 }
 
+export async function sendVerificationApproved({ driver }) {
+  const cfg = await getSmtpConfig();
+  const siteUrl = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
+  await sendEmail({
+    to: driver.email,
+    subject: `Your truck is verified — you can now accept loads on ${cfg.site_name || 'ReturnLoad'}`,
+    html: baseTemplate({
+      title: 'Truck Verified!',
+      body: `
+        <p class="text">Hi <strong>${driver.name}</strong>,</p>
+        <p class="text">Great news! Your truck and documents have been reviewed and <strong style="color:#166534">verified</strong> by our admin team.</p>
+        <div class="info-box">
+          <div class="info-row"><span class="info-label">Status</span><span class="info-value"><span class="badge badge-delivered">Verified</span></span></div>
+          <div class="info-row"><span class="info-label">What's next?</span><span class="info-value">You can now set your route and accept loads</span></div>
+        </div>
+        <p class="text">Log in now, set your return route, and start finding loads along your way!</p>
+      `,
+      siteName: cfg.site_name || 'ReturnLoad',
+      primaryColor: cfg.primary_color || '#0f172a',
+      ctaText: 'Set My Route',
+      ctaUrl: `${siteUrl}/driver/availability`,
+    }),
+  });
+}
+
+export async function sendVerificationRejected({ driver, reason }) {
+  const cfg = await getSmtpConfig();
+  const siteUrl = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
+  await sendEmail({
+    to: driver.email,
+    subject: `Action required: Truck verification rejected on ${cfg.site_name || 'ReturnLoad'}`,
+    html: baseTemplate({
+      title: 'Verification Rejected',
+      body: `
+        <p class="text">Hi <strong>${driver.name}</strong>,</p>
+        <p class="text">Unfortunately, your truck verification has been <strong style="color:#991b1b">rejected</strong> by our admin team.</p>
+        <div class="info-box">
+          <div class="info-row"><span class="info-label">Status</span><span class="info-value"><span class="badge badge-cancelled">Rejected</span></span></div>
+          ${reason ? `<div class="info-row"><span class="info-label">Reason</span><span class="info-value">${reason}</span></div>` : ''}
+        </div>
+        <p class="text">Please fix the issue mentioned above, re-upload your documents, and resubmit for review. Our team will review your updated submission promptly.</p>
+      `,
+      siteName: cfg.site_name || 'ReturnLoad',
+      primaryColor: cfg.primary_color || '#0f172a',
+      ctaText: 'Re-upload Documents',
+      ctaUrl: `${siteUrl}/driver/truck`,
+    }),
+  });
+}
+
 export async function sendLoadStatusUpdate({ load, newStatus, shipper }) {
   const cfg = await getSmtpConfig();
   if (cfg.email_on_load_status !== '1') return;
