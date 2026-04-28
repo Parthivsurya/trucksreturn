@@ -183,14 +183,24 @@ export async function getLoadMatches(req, res) {
 
     const { rows: drivers } = await pool.query(`
       SELECT da.*, u.name as driver_name, u.avg_rating, u.total_ratings,
-             t.truck_type, t.capacity_tons, t.registration_number
+             t.truck_type, t.capacity_tons, t.registration_number,
+             COALESCE(
+               json_agg(
+                 json_build_object('doc_type', d.doc_type, 'file_url', d.file_url)
+               ) FILTER (WHERE d.doc_type IN ('vehicle_front','vehicle_left','vehicle_right')),
+               '[]'
+             ) AS vehicle_photos
       FROM driver_availability da
       JOIN users u ON da.user_id = u.id
       LEFT JOIN trucks t ON t.user_id = da.user_id
+      LEFT JOIN documents d ON d.user_id = da.user_id
+        AND d.doc_type IN ('vehicle_front','vehicle_left','vehicle_right')
       WHERE da.status = 'active'
         AND ABS(da.current_lat - $1) < $2
         AND ABS(da.current_lng - $3) < $4
         AND (t.capacity_tons IS NULL OR t.capacity_tons >= $5)
+      GROUP BY da.id, u.name, u.avg_rating, u.total_ratings,
+               t.truck_type, t.capacity_tons, t.registration_number
     `, [load.pickup_lat, degreeApprox, load.pickup_lng, degreeApprox, load.weight_tons]);
 
     res.json({ drivers, load });

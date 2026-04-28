@@ -3,7 +3,13 @@ import { useParams, Link } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi.js';
 import { useSettings } from '../../context/SettingsContext.jsx';
 import RatingStars from '../../components/RatingStars.jsx';
-import { ArrowLeft, Truck, MapPin, ArrowRight, Send, X } from 'lucide-react';
+import { ArrowLeft, Truck, MapPin, ArrowRight, Send, X, Camera } from 'lucide-react';
+
+const BACKEND = import.meta.env.VITE_API_URL
+  ? import.meta.env.VITE_API_URL.replace('/api', '')
+  : '';
+
+const PHOTO_LABEL = { vehicle_front: 'Front', vehicle_left: 'Left', vehicle_right: 'Right' };
 import toast from 'react-hot-toast';
 
 export default function LoadMatches() {
@@ -101,6 +107,34 @@ export default function LoadMatches() {
                   <span className="flex items-center gap-1"><MapPin size={11} /> {d.current_city} → {d.destination_city}</span>
                   {d.registration_number && <span>🚛 {d.registration_number}</span>}
                 </div>
+
+                {/* Vehicle photos */}
+                {d.vehicle_photos && d.vehicle_photos.length > 0 ? (
+                  <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                    {d.vehicle_photos.map(p => (
+                      <a
+                        key={p.doc_type}
+                        href={`${BACKEND}${p.file_url}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="relative shrink-0 w-28 h-20 rounded-xl overflow-hidden border border-slate-200 group"
+                      >
+                        <img
+                          src={`${BACKEND}${p.file_url}`}
+                          alt={PHOTO_LABEL[p.doc_type]}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs py-0.5 text-center">
+                          {PHOTO_LABEL[p.doc_type]}
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-400">
+                    <Camera size={12} /> No vehicle photos uploaded
+                  </div>
+                )}
               </div>
             ))}
           </div>

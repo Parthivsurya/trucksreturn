@@ -7,3 +7,5 @@ uploads/*
 .DS_Store
 *.md
 *.docx
+*.pdf
+*.webp
