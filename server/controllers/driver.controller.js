@@ -132,6 +132,12 @@ export async function getMatches(req, res) {
     }
 
     const { rows: [truck] } = await pool.query('SELECT * FROM trucks WHERE user_id = $1', [req.user.id]);
+    if (!truck || truck.is_verified !== 1) {
+      return res.status(403).json({
+        error: 'Your truck is pending admin verification. You can find loads once verified.',
+        verification_status: truck?.is_verified ?? 0,
+      });
+    }
     const radiusKm = parseFloat(req.query.radius) || 50;
 
     const matches = await findMatchingLoads(availability, truck, radiusKm);
@@ -187,6 +193,24 @@ export async function getDriverProfile(req, res) {
     res.json({ user, truck, documents: docs, ratings: recentRatings, completedTrips: parseInt(count) });
   } catch (err) {
     return serverError(res, err, 'driver:getProfile');
+  }
+}
+
+export async function submitVerification(req, res) {
+  try {
+    const { rows: [truck] } = await pool.query('SELECT * FROM trucks WHERE user_id = $1', [req.user.id]);
+    if (!truck) return res.status(400).json({ error: 'Register your truck first.' });
+    if (truck.is_verified === 1) return res.status(400).json({ error: 'Already verified.' });
+
+    // Reset to pending and log the resubmission
+    await pool.query('UPDATE trucks SET is_verified = 0, verification_note = NULL WHERE user_id = $1', [req.user.id]);
+    await pool.query(
+      "INSERT INTO verification_history (driver_id, action, note) VALUES ($1, 'resubmitted', NULL)",
+      [req.user.id]
+    );
+    res.json({ message: 'Documents submitted for review.' });
+  } catch (err) {
+    return serverError(res, err, 'driver:submitVerification');
   }
 }
 

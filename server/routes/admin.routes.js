@@ -6,7 +6,9 @@ import {
   getUsers, updateUserStatus, createUser, deleteUser, batchDeleteUsers,
   getLoads, updateLoadStatus, createLoad, deleteLoad, batchDeleteLoads, getShippers,
   getBookings,
+  getDriversForVerification, verifyDriver, getVerificationHistory,
 } from '../controllers/admin.controller.js';
+import { getDriverDocumentsAdmin } from '../controllers/upload.controller.js';
 import { getAdminSettings, updateSettings, testEmailEndpoint } from '../controllers/settings.controller.js';
 
 const router = Router();
@@ -34,5 +36,11 @@ router.get('/bookings',          getBookings);
 router.get('/settings',          getAdminSettings);
 router.put('/settings',          updateSettings);
 router.post('/settings/test-email', testEmailEndpoint);
+
+// Driver verification
+router.get('/drivers/verification',              getDriversForVerification);
+router.get('/drivers/:driverId/documents',       getDriverDocumentsAdmin);
+router.get('/drivers/:driverId/history',         getVerificationHistory);
+router.put('/drivers/:driverId/verify',          verifyDriver);
 
 export default router;

@@ -38,8 +38,14 @@ export async function uploadDocument(req, res) {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
 
+    // Verified drivers cannot replace documents
+    const { rows: [truck] } = await pool.query('SELECT is_verified FROM trucks WHERE user_id = $1', [req.user.id]);
+    if (truck?.is_verified === 1) {
+      return res.status(403).json({ error: 'Your documents are verified and cannot be changed.' });
+    }
+
     const { doc_type } = req.body;
-    const validTypes = ['RC', 'permit', 'insurance', 'PUC', 'licence'];
+    const validTypes = ['RC', 'permit', 'insurance', 'PUC', 'licence', 'vehicle_front', 'vehicle_left', 'vehicle_right'];
     if (!validTypes.includes(doc_type)) {
       return res.status(400).json({ error: `Doc type must be one of: ${validTypes.join(', ')}` });
     }
@@ -64,5 +70,18 @@ export async function getUserDocuments(req, res) {
     res.json({ documents });
   } catch (err) {
     return serverError(res, err, 'upload:getUserDocs');
+  }
+}
+
+// Admin-only: fetch documents for any driver by user ID
+export async function getDriverDocumentsAdmin(req, res) {
+  try {
+    const { rows: documents } = await pool.query(
+      'SELECT * FROM documents WHERE user_id = $1 ORDER BY uploaded_at DESC',
+      [req.params.driverId]
+    );
+    res.json({ documents });
+  } catch (err) {
+    return serverError(res, err, 'upload:getDriverDocsAdmin');
   }
 }

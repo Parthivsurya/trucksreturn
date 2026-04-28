@@ -2,14 +2,15 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext.jsx';
 import { useSettings } from '../context/SettingsContext.jsx';
-import { LayoutDashboard, Users, Package, BookOpen, LogOut, ShieldCheck, Settings, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, Package, BookOpen, LogOut, ShieldCheck, Settings, Menu, X, BadgeCheck } from 'lucide-react';
 
 const navLinks = [
-  { to: '/admin',          label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { to: '/admin/users',    label: 'Users',     icon: Users },
-  { to: '/admin/loads',    label: 'Loads',     icon: Package },
-  { to: '/admin/bookings', label: 'Bookings',  icon: BookOpen },
-  { to: '/admin/settings', label: 'Settings',  icon: Settings },
+  { to: '/admin',                label: 'Dashboard',    icon: LayoutDashboard, exact: true },
+  { to: '/admin/users',          label: 'Users',        icon: Users },
+  { to: '/admin/loads',          label: 'Loads',        icon: Package },
+  { to: '/admin/bookings',       label: 'Bookings',     icon: BookOpen },
+  { to: '/admin/verification',   label: 'Verification', icon: BadgeCheck },
+  { to: '/admin/settings',       label: 'Settings',     icon: Settings },
 ];
 
 export default function AdminLayout({ children }) {

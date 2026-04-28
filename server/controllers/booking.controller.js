@@ -23,6 +23,9 @@ export async function createBooking(req, res) {
 
     const { rows: [truck] } = await pool.query('SELECT * FROM trucks WHERE user_id = $1', [req.user.id]);
     if (!truck) return res.status(400).json({ error: 'Register your truck before accepting loads.' });
+    if (truck.is_verified !== 1) {
+      return res.status(403).json({ error: 'Your truck must be verified by admin before you can accept loads.' });
+    }
 
     // Fetch active availability to check declared free space (LTL support)
     const { rows: [activeAvail] } = await pool.query(

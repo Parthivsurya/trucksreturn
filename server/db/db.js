@@ -74,6 +74,24 @@ async function runMigrations() {
   // Partial load / LTL support — available_capacity_tons on driver availability
   // NULL means full truck available; a number means the driver has declared partial free space
   await pool.query('ALTER TABLE driver_availability ADD COLUMN IF NOT EXISTS available_capacity_tons DOUBLE PRECISION');
+  // Expand documents doc_type check constraint to include vehicle photos
+  await pool.query('ALTER TABLE documents DROP CONSTRAINT IF EXISTS documents_doc_type_check');
+  await pool.query(`ALTER TABLE documents ADD CONSTRAINT documents_doc_type_check CHECK (doc_type IN ('RC','permit','insurance','PUC','licence','vehicle_front','vehicle_left','vehicle_right'))`);
+  // Driver verification — admin must verify truck documents before driver can accept loads
+  // 0 = pending, 1 = verified, 2 = rejected
+  await pool.query('ALTER TABLE trucks ADD COLUMN IF NOT EXISTS is_verified INTEGER NOT NULL DEFAULT 0');
+  await pool.query('ALTER TABLE trucks ADD COLUMN IF NOT EXISTS verification_note TEXT');
+  // Verification history — every rejection is recorded so admin can see past attempts
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS verification_history (
+      id          SERIAL PRIMARY KEY,
+      driver_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      action      TEXT NOT NULL CHECK (action IN ('rejected', 'resubmitted')),
+      note        TEXT,
+      created_at  TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_verif_history_driver ON verification_history(driver_id, created_at DESC)');
   // Add uuid to bookings for non-guessable public URLs
   await pool.query('ALTER TABLE bookings ADD COLUMN IF NOT EXISTS uuid UUID DEFAULT gen_random_uuid()');
   await pool.query("UPDATE bookings SET uuid = gen_random_uuid() WHERE uuid IS NULL");

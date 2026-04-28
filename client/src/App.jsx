@@ -31,6 +31,7 @@ import AdminUsers from './pages/admin/AdminUsers.jsx';
 import AdminLoads from './pages/admin/AdminLoads.jsx';
 import AdminBookings from './pages/admin/AdminBookings.jsx';
 import AdminSettings from './pages/admin/AdminSettings.jsx';
+import AdminDriverVerification from './pages/admin/AdminDriverVerification.jsx';
 
 const toastStyle = {
   style: {
@@ -94,7 +95,8 @@ export default function App() {
         <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
         <Route path="/admin/loads" element={<AdminRoute><AdminLoads /></AdminRoute>} />
         <Route path="/admin/bookings" element={<AdminRoute><AdminBookings /></AdminRoute>} />
-        <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+        <Route path="/admin/settings"      element={<AdminRoute><AdminSettings /></AdminRoute>} />
+        <Route path="/admin/verification"  element={<AdminRoute><AdminDriverVerification /></AdminRoute>} />
 
         {/* Everything else */}
         <Route path="/*" element={<MainApp />} />

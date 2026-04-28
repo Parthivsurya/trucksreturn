@@ -442,3 +442,94 @@ export async function getShippers(req, res) {
     return internalError(res, err, 'getShippers');
   }
 }
+
+// ── Driver Verification ───────────────────────────────────────────────────────
+
+export async function getDriversForVerification(req, res) {
+  try {
+    const { status = 'all', search = '' } = req.query;
+
+    let verifiedFilter = '';
+    if (status === 'pending')  verifiedFilter = 'AND t.is_verified = 0';
+    if (status === 'verified') verifiedFilter = 'AND t.is_verified = 1';
+    if (status === 'rejected') verifiedFilter = 'AND t.is_verified = 2';
+
+    const params = [];
+    let searchFilter = '';
+    if (search.trim()) {
+      params.push(`%${search.trim()}%`);
+      searchFilter = `AND (u.name ILIKE $1 OR u.email ILIKE $1 OR t.registration_number ILIKE $1)`;
+    }
+
+    const { rows: drivers } = await pool.query(`
+      SELECT
+        u.id, u.name, u.email, u.phone, u.created_at, u.is_active,
+        t.id as truck_id, t.truck_type, t.capacity_tons, t.registration_number,
+        t.permit_number, t.home_state, t.insurance_expiry,
+        t.is_verified, t.verification_note,
+        (SELECT COUNT(*) FROM documents d WHERE d.user_id = u.id) as doc_count,
+        (SELECT COUNT(*) FROM verification_history vh WHERE vh.driver_id = u.id AND vh.action = 'rejected') as rejection_count
+      FROM users u
+      JOIN trucks t ON t.user_id = u.id
+      WHERE u.role = 'driver'
+      ${verifiedFilter}
+      ${searchFilter}
+      ORDER BY
+        CASE t.is_verified WHEN 0 THEN 0 WHEN 2 THEN 1 ELSE 2 END,
+        u.created_at DESC
+    `, params);
+
+    res.json({ drivers });
+  } catch (err) {
+    return internalError(res, err, 'getDriversForVerification');
+  }
+}
+
+export async function verifyDriver(req, res) {
+  try {
+    const { is_verified, verification_note } = req.body;
+    // 1 = verified, 2 = rejected
+    if (![1, 2].includes(Number(is_verified))) {
+      return res.status(400).json({ error: 'is_verified must be 1 (verify) or 2 (reject).' });
+    }
+    if (Number(is_verified) === 2 && !verification_note?.trim()) {
+      return res.status(400).json({ error: 'A rejection reason is required.' });
+    }
+
+    const { rows: [truck] } = await pool.query(
+      'SELECT t.id, t.user_id FROM trucks t JOIN users u ON u.id = t.user_id WHERE t.user_id = $1 AND u.role = $2',
+      [req.params.driverId, 'driver']
+    );
+    if (!truck) return res.status(404).json({ error: 'Driver or truck not found.' });
+
+    await pool.query(
+      'UPDATE trucks SET is_verified = $1, verification_note = $2 WHERE user_id = $3',
+      [Number(is_verified), verification_note?.trim() || null, req.params.driverId]
+    );
+
+    // Record rejection in history
+    if (Number(is_verified) === 2) {
+      await pool.query(
+        "INSERT INTO verification_history (driver_id, action, note) VALUES ($1, 'rejected', $2)",
+        [req.params.driverId, verification_note?.trim() || null]
+      );
+    }
+
+    const label = Number(is_verified) === 1 ? 'verified' : 'rejected';
+    res.json({ message: `Driver ${label} successfully.` });
+  } catch (err) {
+    return internalError(res, err, 'verifyDriver');
+  }
+}
+
+export async function getVerificationHistory(req, res) {
+  try {
+    const { rows: history } = await pool.query(
+      'SELECT * FROM verification_history WHERE driver_id = $1 ORDER BY created_at DESC',
+      [req.params.driverId]
+    );
+    res.json({ history });
+  } catch (err) {
+    return internalError(res, err, 'getVerificationHistory');
+  }
+}
