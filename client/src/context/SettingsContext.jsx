@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
 
 const SettingsContext = createContext({
-  settings: { site_name: 'ReturnLoad', logo_url: '', primary_color: '#0f172a', accent_color: '#f59e0b', theme_preset: 'freight', footer_color: '#1e293b' },
+  settings: { site_name: 'ReturnLoad', logo_url: '', favicon_url: '', primary_color: '#0f172a', accent_color: '#f59e0b', theme_preset: 'freight', footer_color: '#1e293b' },
   refresh: () => {},
 });
 
@@ -10,6 +10,7 @@ export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState({
     site_name: 'ReturnLoad',
     logo_url: '',
+    favicon_url: '',
     primary_color: '#0f172a',
     accent_color: '#f59e0b',
     theme_preset: 'freight',
@@ -31,6 +32,10 @@ export function SettingsProvider({ children }) {
       settings.accent_color  || '#f59e0b',
     );
   }, [settings.primary_color, settings.accent_color]);
+
+  useEffect(() => {
+    applyFavicon(settings.favicon_url);
+  }, [settings.favicon_url]);
 
   return (
     <SettingsContext.Provider value={{ settings, setSettings, refresh }}>
@@ -65,6 +70,25 @@ function contrastOn(hex) {
   if (!rgb) return '#ffffff';
   const lum = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
   return lum > 0.5 ? '#0f172a' : '#ffffff';
+}
+
+// ── Favicon injector ──────────────────────────────────────────────────────────
+
+const DEFAULT_FAVICON = '/favicon.svg';
+
+function applyFavicon(url) {
+  const href = url && url.trim() ? url.trim() : DEFAULT_FAVICON;
+  let link = document.querySelector('link[rel~="icon"]');
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    document.head.appendChild(link);
+  }
+  if (link.getAttribute('href') === href) return;
+  link.setAttribute('href', href);
+  // Drop the type attribute so the browser sniffs from the resource — the admin
+  // can paste a .png, .ico, or .svg without us having to know which.
+  link.removeAttribute('type');
 }
 
 // ── Theme injector ────────────────────────────────────────────────────────────

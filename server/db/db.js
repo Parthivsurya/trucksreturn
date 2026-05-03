@@ -48,6 +48,7 @@ async function runMigrations() {
   const defaultSettings = [
     ['site_name',                'ReturnLoad'],
     ['logo_url',                 ''],
+    ['favicon_url',              ''],
     ['primary_color',            '#0f172a'],
     ['accent_color',             '#f59e0b'],
     ['theme_preset',             'freight'],
