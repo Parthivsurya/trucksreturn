@@ -8,11 +8,16 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 export async function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  let token;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.query.access_token) {
+    // EventSource cannot set custom headers — accept JWT via query param for SSE.
+    // Tradeoff: token may appear in access logs. JWT lifetime is 15m so blast radius is small.
+    token = req.query.access_token;
+  } else {
     return res.status(401).json({ error: 'Access denied. No token provided.' });
   }
-
-  const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
 

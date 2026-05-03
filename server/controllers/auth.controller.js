@@ -78,12 +78,11 @@ export async function sendOtp(req, res) {
       return res.json({ message: 'OTP sent to your email.' });
     }
 
-    // OTP enforcement disabled (testing mode) — return OTP directly (dev only)
     if (isProd) {
       return res.status(503).json({ error: 'Email service unavailable. Contact support.' });
     }
-    console.warn(`[auth] OTP enforcement OFF — dev_otp exposed for ${email}`);
-    res.json({ message: 'OTP enforcement disabled (testing mode).', dev_otp: otp });
+    console.warn(`[auth] OTP enforcement OFF — OTP for ${email} is ${otp} (server log only)`);
+    res.json({ message: 'OTP enforcement disabled (testing mode). Check server logs for OTP.' });
   } catch (err) {
     return internalError(res, err, 'sendOtp');
   }
@@ -258,8 +257,8 @@ export async function forgotPassword(req, res) {
     if (isProd) {
       return res.status(503).json({ error: 'Email service unavailable. Contact support.' });
     }
-    console.warn(`[auth] OTP enforcement OFF — dev_otp exposed for ${email}`);
-    res.json({ message: 'OTP enforcement disabled (testing mode).', dev_otp: otp });
+    console.warn(`[auth] OTP enforcement OFF — OTP for ${email} is ${otp} (server log only)`);
+    res.json({ message: 'OTP enforcement disabled (testing mode). Check server logs for OTP.' });
   } catch (err) {
     return internalError(res, err, 'forgotPassword');
   }

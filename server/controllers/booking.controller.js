@@ -4,6 +4,7 @@ import {
   sendBookingCreatedToDriver,
   sendBookingStatusUpdate,
 } from '../services/email.service.js';
+import { subscribe, unsubscribe, broadcast } from '../services/tracking-stream.service.js';
 import { serverError } from '../utils/errors.js';
 
 export async function createBooking(req, res) {
@@ -122,6 +123,8 @@ export async function updateBookingStatus(req, res) {
 
     res.json({ booking: updated });
 
+    broadcast(booking.id, 'status', { status, picked_up_at, delivered_at });
+
     // In-app notification for shipper + fire-and-forget emails
     const { rows: [fullLoad] } = await pool.query('SELECT * FROM loads WHERE id = $1', [booking.load_id]);
     const { rows: [driver] }   = await pool.query('SELECT id, name, email FROM users WHERE id = $1', [booking.driver_id]);
@@ -201,13 +204,55 @@ export async function addTrackingUpdate(req, res) {
     );
     if (!booking) return res.status(404).json({ error: 'Booking not found.' });
 
-    await pool.query(
-      'INSERT INTO tracking_updates (booking_id, lat, lng, status_message) VALUES ($1,$2,$3,$4)',
+    const { rows: [update] } = await pool.query(
+      'INSERT INTO tracking_updates (booking_id, lat, lng, status_message) VALUES ($1,$2,$3,$4) RETURNING *',
       [booking.id, latNum, lngNum, status_message?.trim() || null]
     );
     res.status(201).json({ message: 'Tracking update recorded.' });
+
+    broadcast(booking.id, 'tracking', update);
   } catch (err) {
     return serverError(res, err, 'booking:addTracking');
+  }
+}
+
+export async function streamTracking(req, res) {
+  try {
+    const { rows: [booking] } = await pool.query(
+      'SELECT id, driver_id, shipper_id FROM bookings WHERE uuid = $1',
+      [req.params.uuid]
+    );
+    if (!booking) return res.status(404).json({ error: 'Booking not found.' });
+    if (booking.driver_id !== req.user.id && booking.shipper_id !== req.user.id) {
+      return res.status(403).json({ error: 'Unauthorized.' });
+    }
+
+    // Disable per-request timeout so the long-lived stream isn't killed at 30s
+    req.setTimeout(0);
+    res.socket?.setTimeout(0);
+
+    res.set({
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    res.flushHeaders?.();
+    res.write(': connected\n\n');
+
+    subscribe(booking.id, res);
+
+    // Heartbeat every 25s to keep proxies/load balancers from closing the stream
+    const heartbeat = setInterval(() => {
+      try { res.write(': hb\n\n'); } catch {}
+    }, 25000);
+
+    req.on('close', () => {
+      clearInterval(heartbeat);
+      unsubscribe(booking.id, res);
+    });
+  } catch (err) {
+    return serverError(res, err, 'booking:streamTracking');
   }
 }
 

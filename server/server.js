@@ -18,6 +18,30 @@ import adminRoutes    from './routes/admin.routes.js';
 import settingsRoutes      from './routes/settings.routes.js';
 import notificationRoutes  from './routes/notification.routes.js';
 
+// ── Environment validation (fail-fast on misconfiguration) ───────────────────
+const PLACEHOLDER_SECRETS = new Set([
+  'smartreturnload_jwt_secret_change_me',
+  'your_jwt_secret_here',
+  'change_me',
+  'changeme',
+]);
+const WEAK_PASSWORDS = new Set(['123456', 'password', 'admin', 'admin123', 'changeme']);
+
+if (!process.env.NODE_ENV) {
+  throw new Error('FATAL: NODE_ENV is not set. Set NODE_ENV=production or NODE_ENV=development.');
+}
+if (PLACEHOLDER_SECRETS.has(process.env.JWT_SECRET)) {
+  throw new Error('FATAL: JWT_SECRET is a known placeholder. Generate one with: openssl rand -hex 32');
+}
+if (process.env.JWT_SECRET.length < 32) {
+  throw new Error('FATAL: JWT_SECRET must be at least 32 characters.');
+}
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.ADMIN_PASSWORD || WEAK_PASSWORDS.has(process.env.ADMIN_PASSWORD) || process.env.ADMIN_PASSWORD.length < 12) {
+    throw new Error('FATAL: ADMIN_PASSWORD must be set, ≥12 chars, and not a known weak value in production.');
+  }
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 const clientDistPath  = path.resolve(__dirname, '../client/dist');

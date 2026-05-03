@@ -22,12 +22,42 @@ export default function Tracking() {
 
   useEffect(() => { fetchBooking(); }, [uuid]);
 
-  // Auto-refresh every 15s while active
+  // Live updates: prefer SSE; fall back to 15s polling if the stream fails.
   useEffect(() => {
     if (!booking) return;
     if (!ACTIVE_STATUSES.includes(booking.status)) return;
-    const interval = setInterval(fetchBooking, 15000);
-    return () => clearInterval(interval);
+
+    const token = localStorage.getItem('token');
+    if (!token || typeof EventSource === 'undefined') {
+      const interval = setInterval(fetchBooking, 15000);
+      return () => clearInterval(interval);
+    }
+
+    const es = new EventSource(`/api/bookings/${uuid}/track/stream?access_token=${encodeURIComponent(token)}`);
+    let pollInterval = null;
+
+    es.addEventListener('tracking', (e) => {
+      const update = JSON.parse(e.data);
+      setTracking((prev) => [update, ...prev]);
+      setLastUpdated(Date.now());
+    });
+
+    es.addEventListener('status', () => {
+      fetchBooking();
+    });
+
+    es.onerror = () => {
+      // Stream broke — close it and fall back to polling
+      es.close();
+      if (!pollInterval) {
+        pollInterval = setInterval(fetchBooking, 15000);
+      }
+    };
+
+    return () => {
+      es.close();
+      if (pollInterval) clearInterval(pollInterval);
+    };
   }, [booking?.status, uuid]);
 
   // Seconds-ago counter — ticks every second
