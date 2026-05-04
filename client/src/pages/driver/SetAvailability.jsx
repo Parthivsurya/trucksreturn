@@ -2,30 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi.js';
 import MapView from '../../components/MapView.jsx';
-import { Navigation, MapPin, ArrowRight, Truck, Package } from 'lucide-react';
+import CityCombobox from '../../components/CityCombobox.jsx';
+import { CITIES } from '../../lib/cities.js';
+import { Navigation, ArrowRight, Truck, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-const CITIES = [
-  { name: 'Delhi',      lat: 28.6139, lng: 77.2090 },
-  { name: 'Mumbai',     lat: 19.0760, lng: 72.8777 },
-  { name: 'Bangalore',  lat: 12.9716, lng: 77.5946 },
-  { name: 'Chennai',    lat: 13.0827, lng: 80.2707 },
-  { name: 'Kolkata',    lat: 22.5726, lng: 88.3639 },
-  { name: 'Hyderabad',  lat: 17.3850, lng: 78.4867 },
-  { name: 'Pune',       lat: 18.5204, lng: 73.8567 },
-  { name: 'Ahmedabad',  lat: 23.0225, lng: 72.5714 },
-  { name: 'Jaipur',     lat: 26.9124, lng: 75.7873 },
-  { name: 'Lucknow',    lat: 26.8467, lng: 80.9462 },
-  { name: 'Kochi',      lat: 9.9312,  lng: 76.2673 },
-  { name: 'Coimbatore', lat: 11.0168, lng: 76.9558 },
-  { name: 'Varanasi',   lat: 25.3176, lng: 82.9739 },
-  { name: 'Agra',       lat: 27.1767, lng: 78.0081 },
-  { name: 'Patna',      lat: 25.6093, lng: 85.1376 },
-  { name: 'Trivandrum', lat: 8.5241,  lng: 76.9366 },
-  { name: 'Palakkad',   lat: 10.8505, lng: 76.2711 },
-  { name: 'Gurugram',   lat: 28.4595, lng: 77.0266 },
-  { name: 'Tirupur',    lat: 11.1085, lng: 77.3411 },
-];
 
 export default function SetAvailability() {
   const api = useApi();
@@ -105,11 +85,14 @@ export default function SetAvailability() {
               <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-green-600" /> Current Location
               </label>
-              <select value={form.currentCity} onChange={e => setForm({ ...form, currentCity: e.target.value })}
-                className="input-field" required>
-                <option value="">Select your current city</option>
-                {CITIES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-              </select>
+              <CityCombobox
+                value={form.currentCity}
+                onChange={c => setForm({ ...form, currentCity: c?.name || '' })}
+                placeholder="Search your current city or state…"
+                required
+                disabledCity={form.destinationCity || null}
+                iconColor="text-green-600"
+              />
             </div>
 
             <div className="flex justify-center">
@@ -122,11 +105,14 @@ export default function SetAvailability() {
               <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-red-500" /> Return Destination
               </label>
-              <select value={form.destinationCity} onChange={e => setForm({ ...form, destinationCity: e.target.value })}
-                className="input-field" required>
-                <option value="">Select your destination city</option>
-                {CITIES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-              </select>
+              <CityCombobox
+                value={form.destinationCity}
+                onChange={c => setForm({ ...form, destinationCity: c?.name || '' })}
+                placeholder="Search your destination city or state…"
+                required
+                disabledCity={form.currentCity || null}
+                iconColor="text-red-500"
+              />
             </div>
 
             {/* Truck space selector */}

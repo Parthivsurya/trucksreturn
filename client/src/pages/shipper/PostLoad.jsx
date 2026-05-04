@@ -2,20 +2,10 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi.js';
 import MapView from '../../components/MapView.jsx';
+import CityCombobox from '../../components/CityCombobox.jsx';
+import { CITIES } from '../../lib/cities.js';
 import { Package, MapPin, Weight, IndianRupee, Clock, FileText, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-const CITIES = [
-  { name: 'Delhi',      lat: 28.6139, lng: 77.2090 }, { name: 'Mumbai',     lat: 19.0760, lng: 72.8777 },
-  { name: 'Bangalore',  lat: 12.9716, lng: 77.5946 }, { name: 'Chennai',    lat: 13.0827, lng: 80.2707 },
-  { name: 'Kolkata',    lat: 22.5726, lng: 88.3639 }, { name: 'Hyderabad',  lat: 17.3850, lng: 78.4867 },
-  { name: 'Pune',       lat: 18.5204, lng: 73.8567 }, { name: 'Ahmedabad',  lat: 23.0225, lng: 72.5714 },
-  { name: 'Jaipur',     lat: 26.9124, lng: 75.7873 }, { name: 'Lucknow',    lat: 26.8467, lng: 80.9462 },
-  { name: 'Kochi',      lat: 9.9312,  lng: 76.2673 }, { name: 'Coimbatore', lat: 11.0168, lng: 76.9558 },
-  { name: 'Varanasi',   lat: 25.3176, lng: 82.9739 }, { name: 'Agra',       lat: 27.1767, lng: 78.0081 },
-  { name: 'Patna',      lat: 25.6093, lng: 85.1376 }, { name: 'Trivandrum', lat: 8.5241,  lng: 76.9366 },
-  { name: 'Gurugram',   lat: 28.4595, lng: 77.0266 }, { name: 'Tirupur',    lat: 11.1085, lng: 77.3411 },
-];
 
 const CARGO_TYPES = ['Textiles', 'Agricultural Produce', 'Steel', 'Auto Parts', 'Spices', 'Electronics', 'Furniture', 'Chemicals', 'Construction Materials', 'FMCG', 'Machinery', 'Other'];
 
@@ -81,19 +71,27 @@ export default function PostLoad() {
                 <label className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-1.5">
                   <MapPin size={13} className="text-green-600" /> Pickup City
                 </label>
-                <select value={form.pickupCity} onChange={e => update('pickupCity', e.target.value)} className="input-field" required>
-                  <option value="">Select pickup</option>
-                  {CITIES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-                </select>
+                <CityCombobox
+                  value={form.pickupCity}
+                  onChange={c => update('pickupCity', c?.name || '')}
+                  placeholder="Search pickup city or state…"
+                  required
+                  disabledCity={form.deliveryCity || null}
+                  iconColor="text-green-600"
+                />
               </div>
               <div>
                 <label className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-1.5">
                   <MapPin size={13} className="text-red-500" /> Delivery City
                 </label>
-                <select value={form.deliveryCity} onChange={e => update('deliveryCity', e.target.value)} className="input-field" required>
-                  <option value="">Select delivery</option>
-                  {CITIES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-                </select>
+                <CityCombobox
+                  value={form.deliveryCity}
+                  onChange={c => update('deliveryCity', c?.name || '')}
+                  placeholder="Search delivery city or state…"
+                  required
+                  disabledCity={form.pickupCity || null}
+                  iconColor="text-red-500"
+                />
               </div>
             </div>
 
