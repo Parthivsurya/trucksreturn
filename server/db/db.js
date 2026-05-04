@@ -47,6 +47,7 @@ async function runMigrations() {
   // Settings table seed — insert defaults if missing
   const defaultSettings = [
     ['site_name',                'ReturnLoad'],
+    ['tab_title',                ''],
     ['logo_url',                 ''],
     ['favicon_url',              ''],
     ['primary_color',            '#0f172a'],

@@ -2,13 +2,14 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
 
 const SettingsContext = createContext({
-  settings: { site_name: 'ReturnLoad', logo_url: '', favicon_url: '', primary_color: '#0f172a', accent_color: '#f59e0b', theme_preset: 'freight', footer_color: '#1e293b' },
+  settings: { site_name: 'ReturnLoad', tab_title: '', logo_url: '', favicon_url: '', primary_color: '#0f172a', accent_color: '#f59e0b', theme_preset: 'freight', footer_color: '#1e293b' },
   refresh: () => {},
 });
 
 export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState({
     site_name: 'ReturnLoad',
+    tab_title: '',
     logo_url: '',
     favicon_url: '',
     primary_color: '#0f172a',
@@ -36,6 +37,13 @@ export function SettingsProvider({ children }) {
   useEffect(() => {
     applyFavicon(settings.favicon_url);
   }, [settings.favicon_url]);
+
+  useEffect(() => {
+    const tab  = (settings.tab_title || '').trim();
+    const name = (settings.site_name || '').trim();
+    const title = tab || name;
+    if (title) document.title = title;
+  }, [settings.tab_title, settings.site_name]);
 
   return (
     <SettingsContext.Provider value={{ settings, setSettings, refresh }}>

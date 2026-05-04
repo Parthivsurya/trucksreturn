@@ -3,7 +3,7 @@ import { testEmail as sendTestEmail } from '../services/email.service.js';
 
 // Keys safe to expose to any logged-in or anonymous user (UI only)
 const PUBLIC_KEYS = [
-  'site_name', 'logo_url', 'favicon_url', 'primary_color', 'accent_color', 'footer_color', 'theme_preset',
+  'site_name', 'tab_title', 'logo_url', 'favicon_url', 'primary_color', 'accent_color', 'footer_color', 'theme_preset',
 ];
 
 // All keys that admin can read/write

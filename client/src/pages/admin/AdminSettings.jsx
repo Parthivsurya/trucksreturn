@@ -19,7 +19,7 @@ const PRESETS = [
 export default function AdminSettings() {
   const api = useAdminApi();
   const { settings, setSettings } = useSettings();
-  const [form, setForm]         = useState({ site_name: '', logo_url: '', favicon_url: '', primary_color: '#0f172a', accent_color: '#f59e0b', footer_color: '#1e293b', theme_preset: 'freight', smtp_enabled: '0', smtp_host: '', smtp_port: '587', smtp_secure: '0', smtp_user: '', smtp_pass: '', smtp_from_name: '', smtp_from_email: '', email_on_login: '1', email_on_booking_shipper: '1', email_on_booking_driver: '1', email_on_status_change: '1', email_on_load_status: '1', security_rate_limit: '1', security_otp_required: '1' });
+  const [form, setForm]         = useState({ site_name: '', tab_title: '', logo_url: '', favicon_url: '', primary_color: '#0f172a', accent_color: '#f59e0b', footer_color: '#1e293b', theme_preset: 'freight', smtp_enabled: '0', smtp_host: '', smtp_port: '587', smtp_secure: '0', smtp_user: '', smtp_pass: '', smtp_from_name: '', smtp_from_email: '', email_on_login: '1', email_on_booking_shipper: '1', email_on_booking_driver: '1', email_on_status_change: '1', email_on_load_status: '1', security_rate_limit: '1', security_otp_required: '1' });
   const [savingSecurity, setSavingSecurity] = useState(false);
   const [savingTheme, setSavingTheme] = useState(false);
   const [savingSmtp,  setSavingSmtp]  = useState(false);
@@ -32,6 +32,7 @@ export default function AdminSettings() {
     api.get('/settings').then(data => {
       setForm({
         site_name:               data.site_name               || 'ReturnLoad',
+        tab_title:               data.tab_title               || '',
         logo_url:                data.logo_url                || '',
         favicon_url:             data.favicon_url             || '',
         primary_color:           data.primary_color           || '#0f172a',
@@ -81,7 +82,8 @@ export default function AdminSettings() {
     setSavingTheme(true);
     try {
       const data = await api.put('/settings', {
-        site_name: form.site_name, logo_url: form.logo_url, favicon_url: form.favicon_url,
+        site_name: form.site_name, tab_title: form.tab_title,
+        logo_url: form.logo_url, favicon_url: form.favicon_url,
         primary_color: form.primary_color, accent_color: form.accent_color,
         footer_color: form.footer_color, theme_preset: form.theme_preset,
       });
@@ -152,7 +154,21 @@ export default function AdminSettings() {
                 placeholder="ReturnLoad"
                 className="input-field"
               />
-              <p className="text-xs text-slate-400 mt-1">Shown in the navbar and browser tab</p>
+              <p className="text-xs text-slate-400 mt-1">Shown in the navbar, landing page, and login screens</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Browser Tab Title</label>
+              <input
+                type="text"
+                value={form.tab_title}
+                onChange={e => setForm(f => ({ ...f, tab_title: e.target.value }))}
+                placeholder="ReturnLoad — Smart Return Load Platform"
+                className="input-field"
+              />
+              <p className="text-xs text-slate-400 mt-1">
+                Shown in the browser tab and bookmark text. Leave blank to use the Site Name above.
+              </p>
             </div>
 
             <div>

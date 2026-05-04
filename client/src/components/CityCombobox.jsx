@@ -32,12 +32,13 @@ export default function CityCombobox({
       ? `${selected.name} — ${selected.state}`
       : '';
 
-  const filtered = useMemo(() => {
+  const MAX_VISIBLE = 100;
+  const { filtered, totalMatched } = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return CITIES;
-    return CITIES.filter(c =>
-      c.name.toLowerCase().includes(q) || c.state.toLowerCase().includes(q)
-    );
+    const all = q
+      ? CITIES.filter(c => c.name.toLowerCase().includes(q) || c.state.toLowerCase().includes(q))
+      : CITIES;
+    return { filtered: all.slice(0, MAX_VISIBLE), totalMatched: all.length };
   }, [query]);
 
   // Reset highlight whenever the filtered list changes.
@@ -170,6 +171,11 @@ export default function CityCombobox({
                 </button>
               );
             })
+          )}
+          {totalMatched > MAX_VISIBLE && (
+            <div className="px-3 py-2 text-xs text-slate-400 border-t border-slate-100 sticky bottom-0 bg-white">
+              Showing {MAX_VISIBLE} of {totalMatched} — keep typing to narrow.
+            </div>
           )}
         </div>
       )}
