@@ -4,40 +4,40 @@ import { Truck, Package, MapPin, Shield, ArrowRight, Star, IndianRupee, Zap, Glo
 
 export default function Landing() {
   const { settings } = useSettings();
-  const primary     = settings.primary_color  || '#0f172a';
-  const accent      = settings.accent_color   || '#f59e0b';
-  const footerColor = settings.footer_color   || '#1e293b';
-  const siteName    = settings.site_name      || 'ReturnLoad';
+  const primary = settings.primary_color || '#0f172a';
+  const accent = settings.accent_color || '#f59e0b';
+  const footerColor = settings.footer_color || '#1e293b';
+  const siteName = settings.site_name || 'ReturnLoad';
 
   // Determine if footer background is light or dark
   const footerRgb = footerColor.match(/^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
   const footerLum = footerRgb
     ? (0.299 * parseInt(footerRgb[1], 16) + 0.587 * parseInt(footerRgb[2], 16) + 0.114 * parseInt(footerRgb[3], 16)) / 255
     : 0;
-  const footerText    = footerLum > 0.5 ? '#1e293b' : '#ffffff';
+  const footerText = footerLum > 0.5 ? '#1e293b' : '#ffffff';
   const footerSubtext = footerLum > 0.5 ? 'rgba(30,41,59,0.5)' : 'rgba(255,255,255,0.45)';
 
   const features = [
-    { icon: MapPin,       title: 'Route-Based Matching',      desc: 'Smart algorithm finds loads along your return path — no major detours, maximum profit.' },
-    { icon: Shield,       title: 'Verified Profiles',         desc: 'RC, permit, insurance verification built in. Every driver and shipper is trusted.' },
-    { icon: Globe,        title: 'Live GPS Tracking',         desc: 'Real-time shipment tracking from pickup to delivery with live ETA updates.' },
-    { icon: IndianRupee,  title: 'Transparent Pricing',       desc: 'No middlemen. Agree directly on price. What you see is what you earn.' },
-    { icon: Star,         title: 'Two-Way Ratings',           desc: 'Build your reputation with every trip. Better ratings unlock better loads.' },
-    { icon: Zap,          title: 'Instant Match Alerts',      desc: 'Get notified the moment a load appears on your route. Never miss a haul.' },
+    { icon: MapPin, title: 'Route-Based Matching', desc: 'Smart algorithm finds loads along your return path — no major detours, maximum profit.' },
+    { icon: Shield, title: 'Verified Profiles', desc: 'RC, permit, insurance verification built in. Every driver and shipper is trusted.' },
+    { icon: Globe, title: 'Live GPS Tracking', desc: 'Real-time shipment tracking from pickup to delivery with live ETA updates.' },
+    { icon: IndianRupee, title: 'Transparent Pricing', desc: 'No middlemen. Agree directly on price. What you see is what you earn.' },
+    { icon: Star, title: 'Two-Way Ratings', desc: 'Build your reputation with every trip. Better ratings unlock better loads.' },
+    { icon: Zap, title: 'Instant Match Alerts', desc: 'Get notified the moment a load appears on your route. Never miss a haul.' },
   ];
 
   const steps = [
-    { n: '01', title: 'Register & Verify',  desc: 'Create your profile and upload your documents in under 5 minutes.',         icon: Users },
-    { n: '02', title: 'Post or Broadcast',  desc: 'Shippers post loads. Drivers broadcast their return route and availability.', icon: Package },
-    { n: '03', title: 'Get Matched',        desc: 'The platform instantly finds the best load–truck pairs on the route.',        icon: MapPin },
-    { n: '04', title: 'Book & Deliver',     desc: 'Confirm the booking, pick up, track, and get paid. Simple.',                  icon: Truck },
+    { n: '01', title: 'Register & Verify', desc: 'Create your profile and upload your documents in under 5 minutes.', icon: Users },
+    { n: '02', title: 'Post or Broadcast', desc: 'Shippers post loads. Drivers broadcast their return route and availability.', icon: Package },
+    { n: '03', title: 'Get Matched', desc: 'The platform instantly finds the best load–truck pairs on the route.', icon: MapPin },
+    { n: '04', title: 'Book & Deliver', desc: 'Confirm the booking, pick up, track, and get paid. Simple.', icon: Truck },
   ];
 
   const stats = [
-    { value: '₹40,000 Cr', sub: 'Wasted on empty returns yearly',  badge: 'Problem' },
-    { value: '35%',         sub: 'Of truck-km driven empty in India', badge: 'Opportunity' },
-    { value: '10M+',        sub: 'Truck operators across India',     badge: 'Market' },
-    { value: '₹28,500',    sub: 'Avg cost of a single empty run',   badge: 'Your Loss' },
+    { value: '₹40,000 Cr', sub: 'Wasted on empty returns yearly', badge: 'Problem' },
+    { value: '35%', sub: 'Of truck-km driven empty in India', badge: 'Opportunity' },
+    { value: '10M+', sub: 'Truck operators across India', badge: 'Market' },
+    { value: '₹28,500', sub: 'Avg cost of a single empty run', badge: 'Your Loss' },
   ];
 
   const benefits = [
@@ -224,10 +224,10 @@ export default function Landing() {
 
               {/* Rows */}
               {[
-                { item: 'Diesel fuel',                   cost: '₹12,000 – ₹16,000', Icon: Fuel,        color: '#0369a1' },
-                { item: 'Driver wages (non-productive)', cost: '₹2,500 – ₹4,000',   Icon: UserMinus,   color: '#7c3aed' },
-                { item: 'National Highway tolls',        cost: '₹3,000 – ₹6,000',   Icon: Navigation,  color: '#0f766e' },
-                { item: 'Tyre & mechanical wear',        cost: '₹1,500 – ₹2,500',   Icon: Wrench,      color: '#b45309' },
+                { item: 'Diesel fuel', cost: '₹12,000 – ₹16,000', Icon: Fuel, color: '#0369a1' },
+                { item: 'Driver wages (non-productive)', cost: '₹2,500 – ₹4,000', Icon: UserMinus, color: '#7c3aed' },
+                { item: 'National Highway tolls', cost: '₹3,000 – ₹6,000', Icon: Navigation, color: '#0f766e' },
+                { item: 'Tyre & mechanical wear', cost: '₹1,500 – ₹2,500', Icon: Wrench, color: '#b45309' },
               ].map((r, i) => (
                 <div
                   key={i}
@@ -381,7 +381,7 @@ export default function Landing() {
               <span className="text-xs ml-2" style={{ color: footerSubtext }}>© 2026</span>
             </div>
           </div>
-          <p className="text-xs" style={{ color: footerSubtext }}>Smart return load platform · Made for Indian road freight 🇮🇳</p>
+          <p className="text-xs" style={{ color: footerSubtext }}>Smart return load platform · Made for Indian road freight </p>
         </div>
       </footer>
     </div>
