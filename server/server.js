@@ -85,7 +85,7 @@ app.set('trust proxy', 1);
 // Enforce HTTPS in production
 if (isProd) {
   app.use((req, res, next) => {
-    if (req.headers['x-forwarded-proto'] !== 'https') {
+    if (req.headers['x-forwarded-proto'] !== 'https' && !(req.headers['cf-visitor'] || '').includes('"https"')) {
       return res.redirect(301, `https://${req.headers.host}${req.url}`);
     }
     next();
