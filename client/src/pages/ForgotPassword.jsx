@@ -12,7 +12,7 @@ export default function ForgotPassword() {
 
   const primary  = settings.primary_color || '#0f172a';
   const accent   = settings.accent_color  || '#f59e0b';
-  const siteName = settings.site_name     || 'ReturnLoad';
+  const siteName = settings.site_name     || 'TrucksReturn';
 
   const [step, setStep]       = useState(1); // 1=email, 2=otp, 3=new password
   const [email, setEmail]     = useState('');

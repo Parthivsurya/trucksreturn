@@ -70,7 +70,7 @@ export default function AdminLayout({ children }) {
             <ShieldCheck size={15} style={{ color: primary }} />
           </div>
           <div>
-            <p className="text-white font-bold text-sm leading-tight">{settings.site_name || 'ReturnLoad'}</p>
+            <p className="text-white font-bold text-sm leading-tight">{settings.site_name || 'TrucksReturn'}</p>
             <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Admin</p>
           </div>
         </Link>
@@ -93,7 +93,7 @@ export default function AdminLayout({ children }) {
                   <ShieldCheck size={15} style={{ color: primary }} />
                 </div>
                 <div>
-                  <p className="text-white font-bold text-sm">{settings.site_name || 'ReturnLoad'}</p>
+                  <p className="text-white font-bold text-sm">{settings.site_name || 'TrucksReturn'}</p>
                   <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Admin Panel</p>
                 </div>
               </div>
@@ -135,7 +135,7 @@ export default function AdminLayout({ children }) {
               <ShieldCheck size={17} style={{ color: primary }} />
             </div>
             <div>
-              <p className="text-white font-bold text-sm leading-tight">{settings.site_name || 'ReturnLoad'}</p>
+              <p className="text-white font-bold text-sm leading-tight">{settings.site_name || 'TrucksReturn'}</p>
               <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Admin Panel</p>
             </div>
           </Link>

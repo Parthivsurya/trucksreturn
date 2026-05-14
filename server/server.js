@@ -208,7 +208,7 @@ const server = await (async () => {
   await initializeDatabase();
   await seedDatabase();
   const httpServer = app.listen(PORT, () => {
-    console.log(`🚛 ReturnLoad server running on http://localhost:${PORT}`);
+    console.log(`🚛 TrucksReturn server running on http://localhost:${PORT}`);
     if (isProd) console.log(`📝 Logs → ${logsDir}`);
     if (hasClientBuild) {
       console.log(`🌐 Serving frontend from ${clientDistPath}`);

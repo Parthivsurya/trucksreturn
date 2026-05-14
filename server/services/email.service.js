@@ -23,7 +23,7 @@ export async function sendEmail({ to, subject, html }) {
   if (cfg.smtp_enabled !== '1') return;
   if (!cfg.smtp_host || !cfg.smtp_user || !cfg.smtp_pass) return;
 
-  const from = `"${cfg.smtp_from_name || cfg.site_name || 'ReturnLoad'}" <${cfg.smtp_from_email || cfg.smtp_user}>`;
+  const from = `"${cfg.smtp_from_name || cfg.site_name || 'TrucksReturn'}" <${cfg.smtp_from_email || cfg.smtp_user}>`;
   try {
     await createTransporter(cfg).sendMail({ from, to, subject, html });
     console.log(`📧 Email sent to ${to}: ${subject}`);
@@ -37,17 +37,17 @@ export async function testEmail(toAddress) {
   if (!cfg.smtp_host || !cfg.smtp_user || !cfg.smtp_pass) {
     throw new Error('SMTP not configured. Fill in host, username, and password first.');
   }
-  const from = `"${cfg.smtp_from_name || cfg.site_name || 'ReturnLoad'}" <${cfg.smtp_from_email || cfg.smtp_user}>`;
+  const from = `"${cfg.smtp_from_name || cfg.site_name || 'TrucksReturn'}" <${cfg.smtp_from_email || cfg.smtp_user}>`;
   await createTransporter(cfg).sendMail({
     from,
     to: toAddress,
-    subject: `Test email from ${cfg.site_name || 'ReturnLoad'}`,
+    subject: `Test email from ${cfg.site_name || 'TrucksReturn'}`,
     html: baseTemplate({
       title: 'Test Email',
       preview: 'Your SMTP configuration is working correctly.',
-      body: `<p>This is a test email from your <strong>${cfg.site_name || 'ReturnLoad'}</strong> admin panel.</p>
+      body: `<p>This is a test email from your <strong>${cfg.site_name || 'TrucksReturn'}</strong> admin panel.</p>
              <p>Your SMTP settings are configured correctly and emails will be delivered to users.</p>`,
-      siteName: cfg.site_name || 'ReturnLoad',
+      siteName: cfg.site_name || 'TrucksReturn',
       primaryColor: cfg.primary_color || '#0f172a',
     }),
   });
@@ -55,7 +55,7 @@ export async function testEmail(toAddress) {
 
 // ── Base template ─────────────────────────────────────────────────────────────
 
-function baseTemplate({ title, preview, body, siteName = 'ReturnLoad', primaryColor = '#0f172a', ctaText, ctaUrl }) {
+function baseTemplate({ title, preview, body, siteName = 'TrucksReturn', primaryColor = '#0f172a', ctaText, ctaUrl }) {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -119,7 +119,7 @@ export async function sendOtpEmail({ email, otp, siteName: siteOverride }) {
     throw new Error('Email service is not configured. Please contact the administrator.');
   }
 
-  const site = siteOverride || cfg.site_name || 'ReturnLoad';
+  const site = siteOverride || cfg.site_name || 'TrucksReturn';
   const from = `"${cfg.smtp_from_name || site}" <${cfg.smtp_from_email || cfg.smtp_user}>`;
 
   // Throws on SMTP failure — caller must handle
@@ -149,12 +149,12 @@ export async function sendLoginEmail(user) {
   if (cfg.email_on_login !== '1') return;
   await sendEmail({
     to: user.email,
-    subject: `New login to your ${cfg.site_name || 'ReturnLoad'} account`,
+    subject: `New login to your ${cfg.site_name || 'TrucksReturn'} account`,
     html: baseTemplate({
       title: 'Login Notification',
       body: `
         <p class="text">Hi <strong>${user.name}</strong>,</p>
-        <p class="text">A new login was detected on your <strong>${cfg.site_name || 'ReturnLoad'}</strong> account.</p>
+        <p class="text">A new login was detected on your <strong>${cfg.site_name || 'TrucksReturn'}</strong> account.</p>
         <div class="info-box">
           <div class="info-row"><span class="info-label">Account</span><span class="info-value">${user.email}</span></div>
           <div class="info-row"><span class="info-label">Role</span><span class="info-value" style="text-transform:capitalize">${user.role}</span></div>
@@ -162,7 +162,7 @@ export async function sendLoginEmail(user) {
         </div>
         <p class="text" style="font-size:13px;color:#94a3b8">If this wasn't you, please contact the platform administrator immediately.</p>
       `,
-      siteName: cfg.site_name || 'ReturnLoad',
+      siteName: cfg.site_name || 'TrucksReturn',
       primaryColor: cfg.primary_color || '#0f172a',
     }),
   });
@@ -201,7 +201,7 @@ export async function sendBookingCreatedToShipper({ booking, load, driver, truck
         </div>
         <p class="text" style="font-size:13px;color:#94a3b8;">Or copy this link: <a href="${trackingUrl}" style="color:${cfg.primary_color || '#0f172a'}">${trackingUrl}</a></p>
       `,
-      siteName: cfg.site_name || 'ReturnLoad',
+      siteName: cfg.site_name || 'TrucksReturn',
       primaryColor: cfg.primary_color || '#0f172a',
     }),
   });
@@ -228,7 +228,7 @@ export async function sendBookingCreatedToDriver({ booking, load, driver }) {
         </div>
         <p class="text">Please proceed to the pickup location and update your status when you collect the goods.</p>
       `,
-      siteName: cfg.site_name || 'ReturnLoad',
+      siteName: cfg.site_name || 'TrucksReturn',
       primaryColor: cfg.primary_color || '#0f172a',
     }),
   });
@@ -262,9 +262,9 @@ export async function sendBookingStatusUpdate({ booking, load, newStatus, toUser
           <div class="info-row"><span class="info-label">Price</span><span class="info-value">₹${Number(booking.agreed_price).toLocaleString('en-IN')}</span></div>
           <div class="info-row"><span class="info-label">New Status</span><span class="info-value">${statusBadge(newStatus)}</span></div>
         </div>
-        ${newStatus === 'delivered' ? `<p class="text">Thank you for using ${cfg.site_name || 'ReturnLoad'}! Don't forget to rate your experience.</p>` : ''}
+        ${newStatus === 'delivered' ? `<p class="text">Thank you for using ${cfg.site_name || 'TrucksReturn'}! Don't forget to rate your experience.</p>` : ''}
       `,
-      siteName: cfg.site_name || 'ReturnLoad',
+      siteName: cfg.site_name || 'TrucksReturn',
       primaryColor: cfg.primary_color || '#0f172a',
     }),
   });
@@ -293,11 +293,11 @@ export async function sendDriverConnectRequest({ driver, shipper, load }) {
           ${shipper.phone ? `<div class="info-row"><span class="info-label">Contact</span><span class="info-value">${shipper.phone}</span></div>` : ''}
         </div>
         <p class="text">
-          Log in to <strong>${cfg.site_name || 'ReturnLoad'}</strong>, find this load in the Load Finder,
+          Log in to <strong>${cfg.site_name || 'TrucksReturn'}</strong>, find this load in the Load Finder,
           and accept it to confirm the booking.
         </p>
       `,
-      siteName: cfg.site_name || 'ReturnLoad',
+      siteName: cfg.site_name || 'TrucksReturn',
       primaryColor: cfg.primary_color || '#0f172a',
     }),
   });
@@ -308,7 +308,7 @@ export async function sendVerificationApproved({ driver }) {
   const siteUrl = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
   await sendEmail({
     to: driver.email,
-    subject: `Your truck is verified — you can now accept loads on ${cfg.site_name || 'ReturnLoad'}`,
+    subject: `Your truck is verified — you can now accept loads on ${cfg.site_name || 'TrucksReturn'}`,
     html: baseTemplate({
       title: 'Truck Verified!',
       body: `
@@ -320,7 +320,7 @@ export async function sendVerificationApproved({ driver }) {
         </div>
         <p class="text">Log in now, set your return route, and start finding loads along your way!</p>
       `,
-      siteName: cfg.site_name || 'ReturnLoad',
+      siteName: cfg.site_name || 'TrucksReturn',
       primaryColor: cfg.primary_color || '#0f172a',
       ctaText: 'Set My Route',
       ctaUrl: `${siteUrl}/driver/availability`,
@@ -333,7 +333,7 @@ export async function sendVerificationRejected({ driver, reason }) {
   const siteUrl = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
   await sendEmail({
     to: driver.email,
-    subject: `Action required: Truck verification rejected on ${cfg.site_name || 'ReturnLoad'}`,
+    subject: `Action required: Truck verification rejected on ${cfg.site_name || 'TrucksReturn'}`,
     html: baseTemplate({
       title: 'Verification Rejected',
       body: `
@@ -345,7 +345,7 @@ export async function sendVerificationRejected({ driver, reason }) {
         </div>
         <p class="text">Please fix the issue mentioned above, re-upload your documents, and resubmit for review. Our team will review your updated submission promptly.</p>
       `,
-      siteName: cfg.site_name || 'ReturnLoad',
+      siteName: cfg.site_name || 'TrucksReturn',
       primaryColor: cfg.primary_color || '#0f172a',
       ctaText: 'Re-upload Documents',
       ctaUrl: `${siteUrl}/driver/truck`,
@@ -371,7 +371,7 @@ export async function sendLoadStatusUpdate({ load, newStatus, shipper }) {
           <div class="info-row"><span class="info-label">New Status</span><span class="info-value">${statusBadge(newStatus)}</span></div>
         </div>
       `,
-      siteName: cfg.site_name || 'ReturnLoad',
+      siteName: cfg.site_name || 'TrucksReturn',
       primaryColor: cfg.primary_color || '#0f172a',
     }),
   });

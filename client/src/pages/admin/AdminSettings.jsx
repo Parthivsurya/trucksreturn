@@ -31,7 +31,7 @@ export default function AdminSettings() {
   useEffect(() => {
     api.get('/settings').then(data => {
       setForm({
-        site_name:               data.site_name               || 'ReturnLoad',
+        site_name:               data.site_name               || 'TrucksReturn',
         tab_title:               data.tab_title               || '',
         logo_url:                data.logo_url                || '',
         favicon_url:             data.favicon_url             || '',
@@ -151,7 +151,7 @@ export default function AdminSettings() {
                 type="text"
                 value={form.site_name}
                 onChange={e => setForm(f => ({ ...f, site_name: e.target.value }))}
-                placeholder="ReturnLoad"
+                placeholder="TrucksReturn"
                 className="input-field"
               />
               <p className="text-xs text-slate-400 mt-1">Shown in the navbar, landing page, and login screens</p>
@@ -163,7 +163,7 @@ export default function AdminSettings() {
                 type="text"
                 value={form.tab_title}
                 onChange={e => setForm(f => ({ ...f, tab_title: e.target.value }))}
-                placeholder="ReturnLoad — Smart Return Load Platform"
+                placeholder="TrucksReturn — Smart Return Load Platform"
                 className="input-field"
               />
               <p className="text-xs text-slate-400 mt-1">
@@ -444,7 +444,7 @@ export default function AdminSettings() {
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">From Name</label>
                 <input type="text" value={form.smtp_from_name}
                   onChange={e => setForm(f => ({ ...f, smtp_from_name: e.target.value }))}
-                  className="input-field" placeholder="ReturnLoad Platform" />
+                  className="input-field" placeholder="TrucksReturn Platform" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">From Email</label>

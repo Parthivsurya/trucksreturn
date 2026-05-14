@@ -38,7 +38,7 @@ export default function AdminLogin() {
             <ShieldCheck size={26} className="text-white" />
           </div>
           <h1 className="text-2xl font-black text-navy-900">Admin Access</h1>
-          <p className="text-slate-500 text-sm mt-1">ReturnLoad Platform Administration</p>
+          <p className="text-slate-500 text-sm mt-1">TrucksReturn Platform Administration</p>
         </div>
 
         <form onSubmit={handleSubmit} className="card space-y-5">

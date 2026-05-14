@@ -12,7 +12,7 @@ export default function Login() {
 
   const primary  = settings.primary_color || '#0f172a';
   const accent   = settings.accent_color  || '#f59e0b';
-  const siteName = settings.site_name     || 'ReturnLoad';
+  const siteName = settings.site_name     || 'TrucksReturn';
 
   const [form, setForm]           = useState({ email: '', password: '' });
   const [showPass, setShowPass]   = useState(false);

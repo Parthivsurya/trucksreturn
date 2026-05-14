@@ -53,7 +53,7 @@ export default function AdminDashboard() {
       <div className="p-6 lg:p-8">
         <div className="mb-8">
           <h1 className="text-2xl font-black text-navy-900">Platform Overview</h1>
-          <p className="text-slate-500 text-sm mt-1">Live metrics across the ReturnLoad network</p>
+          <p className="text-slate-500 text-sm mt-1">Live metrics across the TrucksReturn network</p>
         </div>
 
         {/* Stats Grid */}

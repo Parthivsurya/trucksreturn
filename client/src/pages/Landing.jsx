@@ -7,7 +7,7 @@ export default function Landing() {
   const primary = settings.primary_color || '#0f172a';
   const accent = settings.accent_color || '#f59e0b';
   const footerColor = settings.footer_color || '#1e293b';
-  const siteName = settings.site_name || 'ReturnLoad';
+  const siteName = settings.site_name || 'TrucksReturn';
 
   // Determine if footer background is light or dark
   const footerRgb = footerColor.match(/^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);

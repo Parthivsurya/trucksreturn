@@ -72,7 +72,7 @@ export default function Navbar() {
   ];
 
   const links    = user?.role === 'driver' ? driverLinks : user?.role === 'shipper' ? shipperLinks : [];
-  const siteName = settings.site_name     || 'ReturnLoad';
+  const siteName = settings.site_name     || 'TrucksReturn';
   const primary  = settings.primary_color || '#0f172a';
   const accent   = settings.accent_color  || '#f59e0b';
 
