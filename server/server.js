@@ -112,6 +112,8 @@ app.use(helmet({
 }));
 const allowedOrigins = [
   ...(process.env.ALLOWED_ORIGIN || 'http://localhost:5173').split(',').map(s => s.trim()),
+  'https://trucksreturn.com',
+  'https://www.trucksreturn.com',
   'capacitor://localhost',
   'http://localhost',
   'https://localhost',
@@ -119,10 +121,10 @@ const allowedOrigins = [
 const localhostRegex = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true);           // curl / server-to-server
+    if (!origin) return cb(null, true);                       // curl / server-to-server
     if (allowedOrigins.includes(origin)) return cb(null, true);
-    if (localhostRegex.test(origin)) return cb(null, true);  // any localhost port (dev)
-    return cb(new Error(`CORS: ${origin} not allowed`));
+    if (localhostRegex.test(origin)) return cb(null, true);   // any localhost port (dev)
+    return cb(null, false);                                   // silently skip CORS headers (browser blocks, no 500)
   },
   credentials: true,
 }));
