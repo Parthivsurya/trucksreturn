@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const AuthContext = createContext(null);
 
-const API_URL = '/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Decode JWT payload without verifying signature (browser-side, safe for expiry check only)
 function decodeToken(token) {
