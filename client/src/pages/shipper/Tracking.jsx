@@ -33,7 +33,8 @@ export default function Tracking() {
       return () => clearInterval(interval);
     }
 
-    const es = new EventSource(`/api/bookings/${uuid}/track/stream?access_token=${encodeURIComponent(token)}`);
+    const apiBase = import.meta.env.VITE_API_URL || '/api';
+    const es = new EventSource(`${apiBase}/bookings/${uuid}/track/stream?access_token=${encodeURIComponent(token)}`);
     let pollInterval = null;
 
     es.addEventListener('tracking', (e) => {

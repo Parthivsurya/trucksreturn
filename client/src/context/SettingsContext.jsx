@@ -20,7 +20,8 @@ export function SettingsProvider({ children }) {
 
   async function refresh() {
     try {
-      const { data } = await axios.get('/api/settings');
+      const base = import.meta.env.VITE_API_URL || '/api';
+      const { data } = await axios.get(`${base}/settings`);
       setSettings(data);
     } catch (_) {}
   }

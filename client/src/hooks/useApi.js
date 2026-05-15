@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import axios from 'axios';
 
-const API_URL = '/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 async function tryRefreshToken() {
   const res = await axios.post(`${API_URL}/auth/refresh`, {}, { withCredentials: true });

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import axios from 'axios';
 
-const API_URL = '/api/admin';
+const API_URL = `${import.meta.env.VITE_API_URL || '/api'}/admin`;
 
 export function useAdminApi() {
   const getHeaders = useCallback(() => {

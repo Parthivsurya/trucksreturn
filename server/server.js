@@ -110,8 +110,20 @@ app.use(helmet({
   } : false,
   hsts: isProd ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
 }));
+const allowedOrigins = [
+  ...(process.env.ALLOWED_ORIGIN || 'http://localhost:5173').split(',').map(s => s.trim()),
+  'capacitor://localhost',
+  'http://localhost',
+  'https://localhost',
+];
+const localhostRegex = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGIN || 'http://localhost:5173',
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);           // curl / server-to-server
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    if (localhostRegex.test(origin)) return cb(null, true);  // any localhost port (dev)
+    return cb(new Error(`CORS: ${origin} not allowed`));
+  },
   credentials: true,
 }));
 

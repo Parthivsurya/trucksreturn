@@ -132,7 +132,8 @@ export default function RegisterTruck() {
         const fd = new FormData();
         fd.append('file', file);
         fd.append('doc_type', docKey);
-        const res = await fetch('/api/documents', {
+        const apiBase = import.meta.env.VITE_API_URL || '/api';
+        const res = await fetch(`${apiBase}/documents`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: fd,
