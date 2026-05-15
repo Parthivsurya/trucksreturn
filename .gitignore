@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .env
+.env.local
 *.log
 uploads/*
 !uploads/.gitkeep
@@ -12,3 +13,30 @@ uploads/*
 *.png
 *.jpg
 *.jpeg
+
+# Re-include Android resources (app icons, splash, etc.) so the app builds correctly
+!client/android/app/src/main/res/**/*.png
+!client/android/app/src/main/res/**/*.webp
+!client/android/app/src/main/res/**/*.jpg
+!client/android/app/src/main/res/**/*.jpeg
+
+# Android / Gradle build artifacts
+client/android/**/build/
+client/android/.gradle/
+client/android/local.properties
+client/android/captures/
+client/android/.externalNativeBuild/
+client/android/.cxx/
+client/android/app/release/
+
+# Android Studio IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Keystores & signing — NEVER commit (you can never recover your app's identity if you lose these)
+*.keystore
+*.jks
+keystore.properties
+key.properties
