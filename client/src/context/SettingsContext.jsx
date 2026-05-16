@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
 
 const SettingsContext = createContext({
-  settings: { site_name: 'TrucksReturn', tab_title: '', logo_url: '', favicon_url: '', primary_color: '#0f172a', accent_color: '#f59e0b', theme_preset: 'freight', footer_color: '#1e293b' },
+  settings: { site_name: 'TrucksReturn', tab_title: '', logo_url: '', favicon_url: '', primary_color: '#0f4c5c', accent_color: '#06b6d4', theme_preset: 'freight', footer_color: '#0f4c5c' },
   refresh: () => {},
 });
 
@@ -12,10 +12,10 @@ export function SettingsProvider({ children }) {
     tab_title: '',
     logo_url: '',
     favicon_url: '',
-    primary_color: '#0f172a',
-    accent_color: '#f59e0b',
+    primary_color: '#0f4c5c',
+    accent_color: '#06b6d4',
     theme_preset: 'freight',
-    footer_color: '#1e293b',
+    footer_color: '#0f4c5c',
   });
 
   async function refresh() {
@@ -30,8 +30,8 @@ export function SettingsProvider({ children }) {
 
   useEffect(() => {
     applyTheme(
-      settings.primary_color || '#0f172a',
-      settings.accent_color  || '#f59e0b',
+      settings.primary_color || '#0f4c5c',
+      settings.accent_color  || '#06b6d4',
     );
   }, [settings.primary_color, settings.accent_color]);
 
@@ -78,7 +78,7 @@ function contrastOn(hex) {
   const rgb = hexToRgb(hex);
   if (!rgb) return '#ffffff';
   const lum = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
-  return lum > 0.5 ? '#0f172a' : '#ffffff';
+  return lum > 0.5 ? '#0f4c5c' : '#ffffff';
 }
 
 // ── Favicon injector ──────────────────────────────────────────────────────────

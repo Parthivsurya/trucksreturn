@@ -15,7 +15,7 @@ export default function StatCard({ icon: Icon, label, value, color = 'blue', pre
       <div
         className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0"
         style={isAccent
-          ? { backgroundColor: 'var(--accent-subtle, rgba(25,118,210,0.12))', color: 'var(--accent, #1976D2)' }
+          ? { backgroundColor: 'var(--accent-subtle, rgba(6,182,212,0.12))', color: 'var(--accent, #06b6d4)' }
           : { backgroundColor: sc?.bg, color: sc?.icon }
         }
       >

@@ -109,8 +109,8 @@ export default function LoadMatches() {
   const { uuid } = useParams();
   const api = useApi();
   const { settings } = useSettings();
-  const primary = settings.primary_color || '#0f172a';
-  const accent  = settings.accent_color  || '#f59e0b';
+  const primary = settings.primary_color || '#0f4c5c';
+  const accent  = settings.accent_color  || '#06b6d4';
 
   const [drivers, setDrivers] = useState([]);
   const [load, setLoad]       = useState(null);

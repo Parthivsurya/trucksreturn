@@ -28,7 +28,7 @@ export default function SetAvailability() {
   if (currentCityData) markers.push({ lat: currentCityData.lat, lng: currentCityData.lng, type: 'truck',    label: `Current: ${currentCityData.name}` });
   if (destCityData)    markers.push({ lat: destCityData.lat,    lng: destCityData.lng,    type: 'delivery', label: `Destination: ${destCityData.name}` });
   if (currentCityData && destCityData) {
-    routes.push({ from: [currentCityData.lat, currentCityData.lng], to: [destCityData.lat, destCityData.lng], color: '#0f172a', dashed: true });
+    routes.push({ from: [currentCityData.lat, currentCityData.lng], to: [destCityData.lat, destCityData.lng], color: '#0f4c5c', dashed: true });
   }
 
   async function handleSubmit(e) {
@@ -178,7 +178,7 @@ export default function SetAvailability() {
                               className="h-2 rounded-full transition-all"
                               style={{
                                 width: `${Math.min(100, (val / maxCap) * 100)}%`,
-                                backgroundColor: isFull ? '#f59e0b' : '#d97706',
+                                backgroundColor: isFull ? '#06b6d4' : '#0891b2',
                               }}
                             />
                           </div>

@@ -151,7 +151,7 @@ export default function Tracking() {
                     <div
                       className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold mb-2 relative z-10"
                       style={i <= currentIdx
-                        ? { backgroundColor: 'var(--accent)', color: 'var(--accent-text, #0f172a)' }
+                        ? { backgroundColor: 'var(--accent)', color: 'var(--accent-text, #0f4c5c)' }
                         : { backgroundColor: '#f1f5f9', color: '#94a3b8', border: '1px solid #e2e8f0' }
                       }
                     >

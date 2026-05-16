@@ -20,8 +20,8 @@ export default function AdminLayout({ children }) {
   const navigate  = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const primary = settings.primary_color || '#0f172a';
-  const accent  = settings.accent_color  || '#f59e0b';
+  const primary = settings.primary_color || '#0f4c5c';
+  const accent  = settings.accent_color  || '#06b6d4';
 
   function handleLogout() {
     logout();

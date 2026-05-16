@@ -6,7 +6,7 @@ import { Settings, Palette, Type, Check, Mail, Eye, EyeOff, Send, ToggleLeft, To
 import toast from 'react-hot-toast';
 
 const PRESETS = [
-  { id: 'freight',  label: 'Freight',  primary: '#0f172a', accent: '#f59e0b' },  // default
+  { id: 'freight',  label: 'Freight',  primary: '#0f4c5c', accent: '#06b6d4' },  // default
   { id: 'navy',     label: 'Navy',     primary: '#0B2545', accent: '#3b82f6' },
   { id: 'midnight', label: 'Midnight', primary: '#1a1a2e', accent: '#6366f1' },
   { id: 'forest',   label: 'Forest',   primary: '#1a4731', accent: '#22c55e' },
@@ -19,7 +19,7 @@ const PRESETS = [
 export default function AdminSettings() {
   const api = useAdminApi();
   const { settings, setSettings } = useSettings();
-  const [form, setForm]         = useState({ site_name: '', tab_title: '', logo_url: '', favicon_url: '', primary_color: '#0f172a', accent_color: '#f59e0b', footer_color: '#1e293b', theme_preset: 'freight', smtp_enabled: '0', smtp_host: '', smtp_port: '587', smtp_secure: '0', smtp_user: '', smtp_pass: '', smtp_from_name: '', smtp_from_email: '', email_on_login: '1', email_on_booking_shipper: '1', email_on_booking_driver: '1', email_on_status_change: '1', email_on_load_status: '1', security_rate_limit: '1', security_otp_required: '1' });
+  const [form, setForm]         = useState({ site_name: '', tab_title: '', logo_url: '', favicon_url: '', primary_color: '#0f4c5c', accent_color: '#06b6d4', footer_color: '#0f4c5c', theme_preset: 'freight', smtp_enabled: '0', smtp_host: '', smtp_port: '587', smtp_secure: '0', smtp_user: '', smtp_pass: '', smtp_from_name: '', smtp_from_email: '', email_on_login: '1', email_on_booking_shipper: '1', email_on_booking_driver: '1', email_on_status_change: '1', email_on_load_status: '1', security_rate_limit: '1', security_otp_required: '1' });
   const [savingSecurity, setSavingSecurity] = useState(false);
   const [savingTheme, setSavingTheme] = useState(false);
   const [savingSmtp,  setSavingSmtp]  = useState(false);
@@ -35,7 +35,7 @@ export default function AdminSettings() {
         tab_title:               data.tab_title               || '',
         logo_url:                data.logo_url                || '',
         favicon_url:             data.favicon_url             || '',
-        primary_color:           data.primary_color           || '#0f172a',
+        primary_color:           data.primary_color           || '#0f4c5c',
         theme_preset:            data.theme_preset            || 'freight',
         smtp_enabled:            data.smtp_enabled            || '0',
         smtp_host:               data.smtp_host               || '',
@@ -45,8 +45,8 @@ export default function AdminSettings() {
         smtp_pass:               data.smtp_pass               || '',
         smtp_from_name:          data.smtp_from_name          || '',
         smtp_from_email:         data.smtp_from_email         || '',
-        accent_color:            data.accent_color            ?? '#f59e0b',
-        footer_color:            data.footer_color            ?? '#1e293b',
+        accent_color:            data.accent_color            ?? '#06b6d4',
+        footer_color:            data.footer_color            ?? '#0f4c5c',
         security_rate_limit:     data.security_rate_limit     ?? '1',
         security_otp_required:   data.security_otp_required   ?? '1',
         email_on_login:          data.email_on_login          ?? '1',
@@ -311,7 +311,7 @@ export default function AdminSettings() {
                     type="text"
                     value={form.accent_color}
                     onChange={e => setForm(f => ({ ...f, accent_color: e.target.value, theme_preset: 'custom' }))}
-                    placeholder="#1976D2"
+                    placeholder="#06b6d4"
                     className="input-field !py-1.5 font-mono text-sm"
                     maxLength={7}
                   />
@@ -331,7 +331,7 @@ export default function AdminSettings() {
                     type="text"
                     value={form.footer_color}
                     onChange={e => setForm(f => ({ ...f, footer_color: e.target.value }))}
-                    placeholder="#1e293b"
+                    placeholder="#0f4c5c"
                     className="input-field !py-1.5 font-mono text-sm"
                     maxLength={7}
                   />

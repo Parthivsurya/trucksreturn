@@ -4,9 +4,9 @@ import { Truck, Package, MapPin, Shield, ArrowRight, Star, IndianRupee, Zap, Glo
 
 export default function Landing() {
   const { settings } = useSettings();
-  const primary = settings.primary_color || '#0f172a';
-  const accent = settings.accent_color || '#f59e0b';
-  const footerColor = settings.footer_color || '#1e293b';
+  const primary = settings.primary_color || '#0f4c5c';
+  const accent = settings.accent_color || '#06b6d4';
+  const footerColor = settings.footer_color || '#0f4c5c';
   const siteName = settings.site_name || 'TrucksReturn';
 
   // Determine if footer background is light or dark
@@ -14,8 +14,8 @@ export default function Landing() {
   const footerLum = footerRgb
     ? (0.299 * parseInt(footerRgb[1], 16) + 0.587 * parseInt(footerRgb[2], 16) + 0.114 * parseInt(footerRgb[3], 16)) / 255
     : 0;
-  const footerText = footerLum > 0.5 ? '#1e293b' : '#ffffff';
-  const footerSubtext = footerLum > 0.5 ? 'rgba(30,41,59,0.5)' : 'rgba(255,255,255,0.45)';
+  const footerText = footerLum > 0.5 ? '#0f4c5c' : '#ffffff';
+  const footerSubtext = footerLum > 0.5 ? 'rgba(15,76,92,0.5)' : 'rgba(255,255,255,0.45)';
 
   const features = [
     { icon: MapPin, title: 'Route-Based Matching', desc: 'Smart algorithm finds loads along your return path — no major detours, maximum profit.' },

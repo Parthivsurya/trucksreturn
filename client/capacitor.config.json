@@ -2,7 +2,7 @@
   "appId": "com.trucksreturn.app",
   "appName": "TrucksReturn",
   "webDir": "dist",
-  "backgroundColor": "#0f172a",
+  "backgroundColor": "#0f4c5c",
   "android": {
     "allowMixedContent": false,
     "captureInput": true,

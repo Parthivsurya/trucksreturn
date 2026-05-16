@@ -36,7 +36,7 @@ export default function LoadFinder() {
   if (availability) {
     markers.push({ lat: availability.current_lat, lng: availability.current_lng, type: 'truck',    label: `You: ${availability.current_city}` });
     markers.push({ lat: availability.dest_lat,    lng: availability.dest_lng,    type: 'delivery', label: `Home: ${availability.destination_city}` });
-    routes.push({ from: [availability.current_lat, availability.current_lng], to: [availability.dest_lat, availability.dest_lng], color: '#0f172a', dashed: true });
+    routes.push({ from: [availability.current_lat, availability.current_lng], to: [availability.dest_lat, availability.dest_lng], color: '#0f4c5c', dashed: true });
   }
 
   filtered.forEach(load => {

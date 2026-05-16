@@ -73,8 +73,8 @@ export default function Navbar() {
 
   const links    = user?.role === 'driver' ? driverLinks : user?.role === 'shipper' ? shipperLinks : [];
   const siteName = settings.site_name     || 'TrucksReturn';
-  const primary  = settings.primary_color || '#0f172a';
-  const accent   = settings.accent_color  || '#f59e0b';
+  const primary  = settings.primary_color || '#0f4c5c';
+  const accent   = settings.accent_color  || '#06b6d4';
 
   return (
     <>
@@ -156,7 +156,7 @@ export default function Navbar() {
                     <Bell size={18} />
                     {unreadCount > 0 && (
                       <span className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center"
-                        style={{ backgroundColor: 'var(--accent, #f59e0b)', color: primary }}>
+                        style={{ backgroundColor: 'var(--accent, #06b6d4)', color: primary }}>
                         {unreadCount > 9 ? '9+' : unreadCount}
                       </span>
                     )}
@@ -187,7 +187,7 @@ export default function Navbar() {
                               <div className="flex items-start gap-3">
                                 <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
                                   style={{ backgroundColor: n.is_read ? '#f1f5f9' : 'rgba(245,158,11,0.15)' }}>
-                                  <Package size={14} style={{ color: n.is_read ? '#94a3b8' : 'var(--accent, #f59e0b)' }} />
+                                  <Package size={14} style={{ color: n.is_read ? '#94a3b8' : 'var(--accent, #06b6d4)' }} />
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <p className="text-xs font-semibold text-navy-900 leading-tight">{n.title}</p>
@@ -203,7 +203,7 @@ export default function Navbar() {
                                           : `/driver/loads/${n.load_uuid}`}
                                         onClick={() => setNotifOpen(false)}
                                         className="text-[10px] font-bold hover:underline"
-                                        style={{ color: 'var(--accent, #f59e0b)' }}
+                                        style={{ color: 'var(--accent, #06b6d4)' }}
                                       >
                                         View Load →
                                       </Link>
@@ -211,7 +211,7 @@ export default function Navbar() {
                                   </div>
                                 </div>
                                 {!n.is_read && (
-                                  <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: 'var(--accent, #f59e0b)' }} />
+                                  <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: 'var(--accent, #06b6d4)' }} />
                                 )}
                               </div>
                             </div>

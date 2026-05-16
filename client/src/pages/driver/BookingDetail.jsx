@@ -130,7 +130,7 @@ export default function BookingDetail() {
   markers.push({ lat: booking.delivery_lat, lng: booking.delivery_lng, type: 'delivery', label: `Delivery: ${booking.delivery_city}` });
 
   if (currentPos) {
-    routes.push({ from: [currentPos.lat, currentPos.lng], to: [booking.pickup_lat, booking.pickup_lng], color: '#0f172a', dashed: true });
+    routes.push({ from: [currentPos.lat, currentPos.lng], to: [booking.pickup_lat, booking.pickup_lng], color: '#0f4c5c', dashed: true });
   }
   routes.push({ from: [booking.pickup_lat, booking.pickup_lng], to: [booking.delivery_lat, booking.delivery_lng], color: '#16a34a' });
 

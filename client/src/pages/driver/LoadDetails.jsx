@@ -143,7 +143,7 @@ export default function LoadDetails() {
                 <p className="text-xs text-slate-500 mb-4">Accept to confirm this load</p>
                 <button onClick={handleAccept} disabled={booking}
                   className="w-full py-3.5 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-60"
-                  style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text, #0f172a)' }}
+                  style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text, #0f4c5c)' }}
                   onMouseEnter={e => !booking && (e.currentTarget.style.filter = 'brightness(1.08)')}
                   onMouseLeave={e => (e.currentTarget.style.filter = 'none')}
                 >
@@ -168,7 +168,7 @@ export default function LoadDetails() {
             </div>
             <button onClick={handleAccept} disabled={booking}
               className="flex-1 py-3.5 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-60"
-              style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text, #0f172a)' }}
+              style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text, #0f4c5c)' }}
             >
               <CheckCircle size={17} /> {booking ? 'Booking…' : 'Accept Load'}
             </button>
