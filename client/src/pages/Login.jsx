@@ -148,15 +148,6 @@ export default function Login() {
               )}
             </div>
 
-            {/* Demo hint */}
-            <div className="p-3.5 rounded-xl text-xs"
-              style={{ backgroundColor: `${accent}0f`, border: `1px solid ${accent}30` }}>
-              <p className="font-bold mb-1" style={{ color: primary }}>Demo Credentials</p>
-              <p className="text-slate-600">Driver: <span className="font-semibold">rajesh@demo.com</span></p>
-              <p className="text-slate-600">Shipper: <span className="font-semibold">textiles@demo.com</span></p>
-              <p className="text-slate-500 mt-0.5">Password: <span className="font-semibold">demo1234</span></p>
-            </div>
-
             <button type="submit" disabled={loading}
               className="w-full py-3.5 rounded-xl font-bold text-base transition-all duration-150 active:scale-95 disabled:opacity-60 mt-1"
               style={{ backgroundColor: primary, color: '#fff' }}
