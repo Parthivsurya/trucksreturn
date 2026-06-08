@@ -1,6 +1,12 @@
 import 'package:dio/dio.dart';
 import 'api_client.dart';
 
+class LoadMatchesResult {
+  final Map<String, dynamic> load;
+  final List<Map<String, dynamic>> drivers;
+  const LoadMatchesResult({required this.load, required this.drivers});
+}
+
 class ShipperApi {
   static final _dio = ApiClient.instance.dio;
 
@@ -52,22 +58,35 @@ class ShipperApi {
     return const [];
   }
 
-  static Future<List<Map<String, dynamic>>> getLoadMatches(String uuid) async {
+  static Future<LoadMatchesResult> getLoadMatches(String uuid) async {
     final r = await _dio.get('/loads/$uuid/matches');
-    if (r.statusCode == 200 && r.data is Map && r.data['matches'] is List) {
-      return (r.data['matches'] as List)
+    if (r.statusCode == 200 && r.data is Map) {
+      final drivers = (r.data['drivers'] as List? ?? const [])
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
+      final load = r.data['load'] is Map
+          ? Map<String, dynamic>.from(r.data['load'] as Map)
+          : <String, dynamic>{};
+      return LoadMatchesResult(load: load, drivers: drivers);
     }
-    return const [];
+    return const LoadMatchesResult(load: {}, drivers: []);
   }
 
-  static Future<void> connectDriver(String loadUuid, int driverId) async {
+  static Future<Map<String, dynamic>?> getLoadByUuid(String uuid) async {
+    final r = await _dio.get('/loads/$uuid');
+    if (r.statusCode == 200 && r.data is Map && r.data['load'] is Map) {
+      return Map<String, dynamic>.from(r.data['load']);
+    }
+    return null;
+  }
+
+  static Future<String> connectDriver(String loadUuid, int driverId) async {
     final r = await _dio.post('/loads/$loadUuid/connect-driver',
         data: {'driver_id': driverId});
-    if (r.statusCode != 200 && r.statusCode != 201) {
-      throw ApiException(extractResponseError(r), r.statusCode);
+    if (r.statusCode == 200 || r.statusCode == 201) {
+      return r.data is Map ? (r.data['message']?.toString() ?? 'Request sent') : 'Request sent';
     }
+    throw ApiException(extractResponseError(r), r.statusCode);
   }
 
   static Future<List<Map<String, dynamic>>> getBookings() async {
@@ -78,6 +97,14 @@ class ShipperApi {
           .toList();
     }
     return const [];
+  }
+
+  static Future<Map<String, dynamic>?> getBookingByUuid(String uuid) async {
+    final r = await _dio.get('/bookings/$uuid');
+    if (r.statusCode == 200 && r.data is Map && r.data['booking'] is Map) {
+      return Map<String, dynamic>.from(r.data['booking']);
+    }
+    return null;
   }
 
   static Future<Map<String, dynamic>?> getStats() async {

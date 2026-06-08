@@ -79,8 +79,8 @@ class _ShipperHomeTabState extends State<ShipperHomeTab> {
                 )),
                 const SizedBox(width: 10),
                 Expanded(child: _Stat(
-                  icon: Icons.local_shipping_rounded, label: 'Delivered',
-                  value: _stats?['delivered']?.toString() ?? '0',
+                  icon: Icons.fiber_manual_record_rounded, label: 'Active',
+                  value: _stats?['activeLoads']?.toString() ?? '0',
                 )),
                 const SizedBox(width: 10),
                 Expanded(child: _Stat(

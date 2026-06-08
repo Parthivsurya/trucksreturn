@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../core/api/shipper_api.dart';
 import '../../core/theme.dart';
 import 'post_load_screen.dart';
+import 'shipper_load_detail_screen.dart';
 
 class ShipperLoadsTab extends StatefulWidget {
   const ShipperLoadsTab({super.key});
@@ -58,7 +59,20 @@ class _ShipperLoadsTabState extends State<ShipperLoadsTab> {
                           padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
                           itemCount: _loads.length,
                           separatorBuilder: (_, _) => const SizedBox(height: 12),
-                          itemBuilder: (_, i) => _LoadCard(load: _loads[i]),
+                          itemBuilder: (_, i) {
+                            final ld = _loads[i];
+                            return _LoadCard(
+                              load: ld,
+                              onTap: () async {
+                                final uuid = ld['uuid']?.toString();
+                                if (uuid == null) return;
+                                await Navigator.push(context, MaterialPageRoute(
+                                  builder: (_) => ShipperLoadDetailScreen(uuid: uuid),
+                                ));
+                                if (mounted) _load();
+                              },
+                            );
+                          },
                         ),
             ),
           ),
@@ -101,14 +115,18 @@ class _ShipperLoadsTabState extends State<ShipperLoadsTab> {
 
 class _LoadCard extends StatelessWidget {
   final Map<String, dynamic> load;
-  const _LoadCard({required this.load});
+  final VoidCallback onTap;
+  const _LoadCard({required this.load, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final money = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
     final price = load['offered_price'] is num ? money.format(load['offered_price']) : '—';
     final status = load['status']?.toString() ?? 'open';
-    return Container(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -150,6 +168,7 @@ class _LoadCard extends StatelessWidget {
             ]),
           ],
         ],
+      ),
       ),
     );
   }
