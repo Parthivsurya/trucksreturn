@@ -40,6 +40,16 @@ class BookingApi {
     final r = await _dio.put('/bookings/$uuid/status', data: {'status': status});
     if (r.statusCode != 200) throw ApiException(extractResponseError(r), r.statusCode);
   }
+
+  static Future<void> rate(String uuid, {required int score, String? comment}) async {
+    final r = await _dio.post('/bookings/$uuid/rate', data: {
+      'score': score,
+      if (comment != null && comment.trim().isNotEmpty) 'comment': comment.trim(),
+    });
+    if (r.statusCode != 200 && r.statusCode != 201) {
+      throw ApiException(extractResponseError(r), r.statusCode);
+    }
+  }
 }
 
 class BookingDetail {

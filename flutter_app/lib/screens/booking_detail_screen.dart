@@ -7,6 +7,7 @@ import '../core/api/tracking_transmitter.dart';
 import '../core/auth/auth_provider.dart';
 import '../core/theme.dart';
 import '../widgets/app_button.dart';
+import '../widgets/rating_sheet.dart';
 
 class BookingDetailScreen extends StatefulWidget {
   final String uuid;
@@ -350,8 +351,68 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           ],
           const SizedBox(height: 20),
           if (isDriver) _driverActions(status),
+          if (status == 'delivered') _ratePrompt(isDriver, b),
         ],
       ),
+    );
+  }
+
+  Widget _ratePrompt(bool isDriver, Map<String, dynamic> b) {
+    final hasRated = b['has_rated'] == true;
+    final otherName = (isDriver ? b['shipper_name'] : b['driver_name'])?.toString() ?? '';
+    final otherRole = isDriver ? 'shipper' : 'driver';
+    if (hasRated) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppTheme.success.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppTheme.success.withValues(alpha: 0.3)),
+        ),
+        child: const Row(children: [
+          Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 20),
+          SizedBox(width: 10),
+          Expanded(child: Text('You rated this trip. Thanks!',
+              style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.success))),
+        ]),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.warning, width: 1.5),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Icon(Icons.star_rounded, color: AppTheme.warning, size: 22),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Text('Rate your trip',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+          ),
+        ]),
+        const SizedBox(height: 6),
+        Text(
+          otherName.isEmpty ? 'Share feedback about the $otherRole.' : 'How was working with $otherName?',
+          style: const TextStyle(color: AppTheme.muted, fontSize: 13),
+        ),
+        const SizedBox(height: 12),
+        PrimaryButton(
+          label: 'Rate ${otherName.isEmpty ? otherRole : otherName}',
+          icon: Icons.star_rounded,
+          onPressed: () async {
+            final ok = await showRatingSheet(
+              context,
+              uuid: widget.uuid,
+              counterpartyName: otherName.isEmpty ? otherRole : otherName,
+              counterpartyRole: otherRole,
+            );
+            if (ok && mounted) _load();
+          },
+        ),
+      ]),
     );
   }
 
