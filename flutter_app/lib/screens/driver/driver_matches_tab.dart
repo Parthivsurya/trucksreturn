@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../core/api/driver_api.dart';
 import '../../core/theme.dart';
 import '../../widgets/app_button.dart';
+import '../../widgets/booking_sheet.dart';
 
 class DriverMatchesTab extends StatefulWidget {
   const DriverMatchesTab({super.key});
@@ -22,6 +23,14 @@ class _DriverMatchesTabState extends State<DriverMatchesTab> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  Future<void> _accept(Map<String, dynamic> match) async {
+    final ok = await AcceptLoadSheet.show(context, match);
+    if (ok == true && mounted) {
+      showSuccess(context, 'Booking confirmed. See it in Bookings tab.');
+      _load();
+    }
   }
 
   Future<void> _load() async {
@@ -99,7 +108,10 @@ class _DriverMatchesTabState extends State<DriverMatchesTab> {
                             padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                             itemCount: _matches.length,
                             separatorBuilder: (_, _) => const SizedBox(height: 12),
-                            itemBuilder: (_, i) => _MatchCard(m: _matches[i]),
+                            itemBuilder: (_, i) => _MatchCard(
+                              m: _matches[i],
+                              onAccept: () => _accept(_matches[i]),
+                            ),
                           ),
           ),
         ),
@@ -110,7 +122,8 @@ class _DriverMatchesTabState extends State<DriverMatchesTab> {
 
 class _MatchCard extends StatelessWidget {
   final Map<String, dynamic> m;
-  const _MatchCard({required this.m});
+  final VoidCallback onAccept;
+  const _MatchCard({required this.m, required this.onAccept});
 
   @override
   Widget build(BuildContext context) {
@@ -174,17 +187,13 @@ class _MatchCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: () => _book(context, m),
+              onPressed: onAccept,
               child: const Text('Accept load'),
             ),
           ),
         ],
       ),
     );
-  }
-
-  Future<void> _book(BuildContext context, Map<String, dynamic> match) async {
-    showError(context, 'Booking flow coming next');
   }
 }
 
