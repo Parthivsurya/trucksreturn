@@ -4,31 +4,34 @@ import '../api/api_client.dart';
 
 class AppUser {
   final int id;
-  final String uuid;
+  final String? uuid;
   final String name;
   final String email;
-  final String phone;
-  final String role; // 'driver' | 'shipper'
+  final String? phone;
+  final String role;
   final bool verified;
+  final Map<String, dynamic>? truck;
 
   AppUser({
     required this.id,
-    required this.uuid,
+    this.uuid,
     required this.name,
     required this.email,
-    required this.phone,
+    this.phone,
     required this.role,
     this.verified = false,
+    this.truck,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> j) => AppUser(
         id: (j['id'] as num).toInt(),
-        uuid: j['uuid']?.toString() ?? '',
+        uuid: j['uuid']?.toString(),
         name: j['name']?.toString() ?? '',
         email: j['email']?.toString() ?? '',
-        phone: j['phone']?.toString() ?? '',
+        phone: j['phone']?.toString(),
         role: j['role']?.toString() ?? 'driver',
-        verified: j['verified'] == true,
+        verified: j['verified'] == true || j['is_verified'] == true,
+        truck: j['truck'] is Map ? Map<String, dynamic>.from(j['truck']) : null,
       );
 }
 
@@ -50,7 +53,8 @@ class AuthProvider extends ChangeNotifier {
     try {
       final r = await ApiClient.instance.dio.get('/auth/me');
       if (r.statusCode == 200 && r.data is Map) {
-        user = AppUser.fromJson(Map<String, dynamic>.from(r.data['user'] ?? r.data));
+        final m = Map<String, dynamic>.from(r.data);
+        user = AppUser.fromJson(Map<String, dynamic>.from(m['user'] ?? m));
       } else {
         await ApiClient.instance.clearToken();
       }
@@ -61,30 +65,33 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> login(String identifier, String password) async {
+  Future<String?> login(String email, String password) async {
     try {
       final r = await ApiClient.instance.dio.post('/auth/login', data: {
-        'identifier': identifier,
+        'email': email.trim(),
         'password': password,
       });
       if (r.statusCode == 200 && r.data is Map) {
-        final token = r.data['token']?.toString() ?? r.data['accessToken']?.toString();
+        final m = Map<String, dynamic>.from(r.data);
+        final token = m['token']?.toString();
         if (token != null) await ApiClient.instance.saveToken(token);
-        user = AppUser.fromJson(Map<String, dynamic>.from(r.data['user'] ?? r.data));
+        user = AppUser.fromJson(Map<String, dynamic>.from(m['user'] ?? m));
         notifyListeners();
         return null;
       }
-      return r.data is Map ? (r.data['message']?.toString() ?? 'Login failed') : 'Login failed';
+      return extractResponseError(r);
     } on DioException catch (e) {
       return extractError(e);
     }
   }
 
-  Future<String?> sendOtp(String phone) async {
+  Future<String?> sendOtp(String email) async {
     try {
-      final r = await ApiClient.instance.dio.post('/auth/send-otp', data: {'phone': phone});
+      final r = await ApiClient.instance.dio.post('/auth/send-otp', data: {
+        'email': email.trim(),
+      });
       if (r.statusCode == 200) return null;
-      return r.data is Map ? (r.data['message']?.toString() ?? 'Failed to send OTP') : 'Failed';
+      return extractResponseError(r);
     } on DioException catch (e) {
       return extractError(e);
     }
@@ -100,23 +107,26 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     try {
       final r = await ApiClient.instance.dio.post('/auth/register', data: {
-        'name': name,
-        'email': email,
-        'phone': phone,
+        'name': name.trim(),
+        'email': email.trim(),
+        'phone': phone.trim(),
         'password': password,
         'role': role,
-        'otp': otp,
+        'otp': otp.trim(),
       });
       if (r.statusCode == 201 || r.statusCode == 200) {
         if (r.data is Map) {
-          final token = r.data['token']?.toString() ?? r.data['accessToken']?.toString();
+          final m = Map<String, dynamic>.from(r.data);
+          final token = m['token']?.toString();
           if (token != null) await ApiClient.instance.saveToken(token);
-          user = AppUser.fromJson(Map<String, dynamic>.from(r.data['user'] ?? r.data));
+          if (m['user'] != null) {
+            user = AppUser.fromJson(Map<String, dynamic>.from(m['user']));
+          }
           notifyListeners();
         }
         return null;
       }
-      return r.data is Map ? (r.data['message']?.toString() ?? 'Registration failed') : 'Failed';
+      return extractResponseError(r);
     } on DioException catch (e) {
       return extractError(e);
     }

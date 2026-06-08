@@ -47,10 +47,25 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
-String extractError(DioException e) {
-  final data = e.response?.data;
-  if (data is Map) {
-    return data['message']?.toString() ?? data['error']?.toString() ?? 'Request failed';
+String extractError(dynamic err) {
+  if (err is DioException) {
+    final data = err.response?.data;
+    if (data is Map) {
+      return data['error']?.toString() ??
+          data['message']?.toString() ??
+          'Request failed';
+    }
+    return err.message ?? 'Network error';
   }
-  return e.message ?? 'Network error';
+  return err?.toString() ?? 'Unknown error';
+}
+
+String extractResponseError(Response r) {
+  final data = r.data;
+  if (data is Map) {
+    return data['error']?.toString() ??
+        data['message']?.toString() ??
+        'Request failed (${r.statusCode})';
+  }
+  return 'Request failed (${r.statusCode})';
 }

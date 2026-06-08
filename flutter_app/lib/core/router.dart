@@ -1,6 +1,4 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'auth/auth_provider.dart';
 import '../screens/splash_screen.dart';
 import '../screens/auth/login_screen.dart';
@@ -28,12 +26,12 @@ GoRouter buildRouter(AuthProvider auth) {
       return null;
     },
     routes: [
-      GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
-      GoRoute(path: '/role', builder: (_, __) => const RoleSelectScreen()),
+      GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
+      GoRoute(path: '/role', builder: (_, _) => const RoleSelectScreen()),
       GoRoute(path: '/login', builder: (_, s) => LoginScreen(role: s.uri.queryParameters['role'] ?? 'driver')),
       GoRoute(path: '/register', builder: (_, s) => RegisterScreen(role: s.uri.queryParameters['role'] ?? 'driver')),
-      GoRoute(path: '/driver', builder: (_, __) => const DriverShell()),
-      GoRoute(path: '/shipper', builder: (_, __) => const ShipperShell()),
+      GoRoute(path: '/driver', builder: (_, _) => const DriverShell()),
+      GoRoute(path: '/shipper', builder: (_, _) => const ShipperShell()),
     ],
   );
 }
