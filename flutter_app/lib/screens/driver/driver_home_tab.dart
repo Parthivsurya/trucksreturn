@@ -8,6 +8,7 @@ import '../../core/theme.dart';
 import '../../widgets/app_button.dart';
 import 'truck_register_screen.dart';
 import 'post_availability_screen.dart';
+import 'verification_screen.dart';
 
 class DriverHomeTab extends StatefulWidget {
   const DriverHomeTab({super.key});
@@ -122,6 +123,18 @@ class _DriverHomeTabState extends State<DriverHomeTab> {
                 )
               else
                 _TruckCard(truck: _truck!),
+              if (_truck != null && _truck!['is_verified'] != 1) ...[
+                const SizedBox(height: 12),
+                _ActionCard(
+                  icon: Icons.verified_user_rounded,
+                  title: 'Complete verification',
+                  subtitle: 'Upload licence, RC, insurance, truck photos',
+                  cta: 'Upload docs',
+                  onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const VerificationScreen()))
+                      .then((_) => _load()),
+                ),
+              ],
               const SizedBox(height: 14),
               if (_truck != null) ...[
                 if (_availability == null)
