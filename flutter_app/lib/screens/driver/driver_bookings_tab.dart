@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/api/driver_api.dart';
 import '../../core/theme.dart';
+import '../booking_detail_screen.dart';
 
 class DriverBookingsTab extends StatefulWidget {
   const DriverBookingsTab({super.key});
@@ -69,7 +70,19 @@ class _DriverBookingsTabState extends State<DriverBookingsTab> {
                         padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
                         itemCount: _bookings.length,
                         separatorBuilder: (_, _) => const SizedBox(height: 12),
-                        itemBuilder: (_, i) => _BookingCard(b: _bookings[i]),
+                        itemBuilder: (_, i) {
+                          final b = _bookings[i];
+                          return _BookingCard(
+                            b: b,
+                            onTap: () async {
+                              final uuid = b['uuid']?.toString();
+                              if (uuid == null) return;
+                              await Navigator.push(context,
+                                  MaterialPageRoute(builder: (_) => BookingDetailScreen(uuid: uuid)));
+                              if (mounted) _load();
+                            },
+                          );
+                        },
                       ),
           ),
         ),
@@ -80,21 +93,25 @@ class _DriverBookingsTabState extends State<DriverBookingsTab> {
 
 class _BookingCard extends StatelessWidget {
   final Map<String, dynamic> b;
-  const _BookingCard({required this.b});
+  final VoidCallback onTap;
+  const _BookingCard({required this.b, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final money = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
     final price = b['agreed_price'] is num ? money.format(b['agreed_price']) : '—';
     final status = b['status']?.toString() ?? 'pending';
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Column(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.border),
+        ),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
@@ -129,6 +146,7 @@ class _BookingCard extends StatelessWidget {
             ]),
           ],
         ],
+      ),
       ),
     );
   }

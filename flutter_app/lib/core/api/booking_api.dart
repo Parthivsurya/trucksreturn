@@ -21,12 +21,16 @@ class BookingApi {
     throw ApiException(extractResponseError(r), r.statusCode);
   }
 
-  static Future<Map<String, dynamic>?> getByUuid(String uuid) async {
+  static Future<BookingDetail?> getByUuid(String uuid) async {
     try {
       final r = await _dio.get('/bookings/$uuid');
       if (r.statusCode == 200 && r.data is Map) {
         final m = Map<String, dynamic>.from(r.data);
-        return Map<String, dynamic>.from(m['booking'] ?? m);
+        final b = Map<String, dynamic>.from(m['booking'] ?? m);
+        final t = (m['tracking'] is List)
+            ? (m['tracking'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList()
+            : <Map<String, dynamic>>[];
+        return BookingDetail(booking: b, tracking: t);
       }
     } on DioException { /* ignore */ }
     return null;
@@ -36,4 +40,10 @@ class BookingApi {
     final r = await _dio.put('/bookings/$uuid/status', data: {'status': status});
     if (r.statusCode != 200) throw ApiException(extractResponseError(r), r.statusCode);
   }
+}
+
+class BookingDetail {
+  final Map<String, dynamic> booking;
+  final List<Map<String, dynamic>> tracking;
+  BookingDetail({required this.booking, required this.tracking});
 }

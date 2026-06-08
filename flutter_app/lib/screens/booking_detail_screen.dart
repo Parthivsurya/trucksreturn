@@ -1,0 +1,347 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../core/api/booking_api.dart';
+import '../core/auth/auth_provider.dart';
+import '../core/theme.dart';
+import '../widgets/app_button.dart';
+
+class BookingDetailScreen extends StatefulWidget {
+  final String uuid;
+  const BookingDetailScreen({super.key, required this.uuid});
+
+  @override
+  State<BookingDetailScreen> createState() => _BookingDetailScreenState();
+}
+
+class _BookingDetailScreenState extends State<BookingDetailScreen> {
+  BookingDetail? _detail;
+  bool _loading = true;
+  bool _updating = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final d = await BookingApi.getByUuid(widget.uuid);
+      if (!mounted) return;
+      setState(() {
+        _detail = d;
+        _error = d == null ? 'Booking not found' : null;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _setStatus(String status, String confirmMsg) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Confirm'),
+        content: Text(confirmMsg),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Confirm')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => _updating = true);
+    try {
+      await BookingApi.updateStatus(widget.uuid, status);
+      await _load();
+      if (mounted) showSuccess(context, 'Status updated');
+    } catch (e) {
+      if (mounted) showError(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _updating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Booking')),
+      body: SafeArea(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+            : _error != null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.warning_amber_rounded, size: 56, color: AppTheme.muted),
+                        const SizedBox(height: 12),
+                        Text(_error!, textAlign: TextAlign.center,
+                            style: const TextStyle(color: AppTheme.muted)),
+                      ]),
+                    ),
+                  )
+                : _buildContent(),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    final b = _detail!.booking;
+    final auth = context.read<AuthProvider>();
+    final isDriver = auth.isDriver;
+    final status = b['status']?.toString() ?? 'confirmed';
+    final money = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+    final price = b['agreed_price'] is num ? money.format(b['agreed_price']) : '—';
+    final otherName = isDriver ? b['shipper_name'] : b['driver_name'];
+    final otherPhone = isDriver ? b['shipper_phone'] : b['driver_phone'];
+
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        children: [
+          _StatusBanner(status: status),
+          const SizedBox(height: 16),
+          _Card(
+            children: [
+              const Text('Route', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppTheme.muted)),
+              const SizedBox(height: 12),
+              _routeRow(Icons.my_location_rounded, AppTheme.success,
+                  b['pickup_city']?.toString() ?? '', b['pickup_address']?.toString()),
+              const Padding(
+                padding: EdgeInsets.only(left: 7, top: 6, bottom: 6),
+                child: SizedBox(height: 18, child: VerticalDivider(width: 1, color: AppTheme.border)),
+              ),
+              _routeRow(Icons.location_on_rounded, AppTheme.danger,
+                  b['delivery_city']?.toString() ?? '', b['delivery_address']?.toString()),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _Card(
+            children: [
+              const Text('Load details', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppTheme.muted)),
+              const SizedBox(height: 10),
+              _row('Cargo', b['cargo_type']?.toString() ?? '—'),
+              _row('Weight', b['weight_tons'] != null ? '${b['weight_tons']} tons' : '—'),
+              if (b['handling_instructions'] != null)
+                _row('Handling', b['handling_instructions'].toString()),
+              const Divider(height: 24),
+              _row('Agreed price', price, bold: true),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _Card(
+            children: [
+              Text(isDriver ? 'Shipper' : 'Driver',
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppTheme.muted)),
+              const SizedBox(height: 10),
+              Row(children: [
+                Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    (otherName?.toString().isNotEmpty == true ? otherName.toString()[0] : '?').toUpperCase(),
+                    style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.primary),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(otherName?.toString() ?? '—',
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                      if (otherPhone != null)
+                        Text(otherPhone.toString(),
+                            style: const TextStyle(color: AppTheme.muted, fontSize: 13)),
+                    ],
+                  ),
+                ),
+                if (otherPhone != null)
+                  IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.phone_rounded, color: AppTheme.success),
+                  ),
+              ]),
+              if (isDriver && b['truck_type'] != null) ...[
+                const Divider(height: 24),
+                _row('Your truck', '${b['truck_type']} • ${b['capacity_tons']}t'),
+              ],
+            ],
+          ),
+          if (_detail!.tracking.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _Card(
+              children: [
+                const Text('Tracking',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppTheme.muted)),
+                const SizedBox(height: 10),
+                ..._detail!.tracking.map((t) {
+                  final at = t['created_at']?.toString();
+                  String when = '';
+                  if (at != null) {
+                    try {
+                      when = DateFormat('d MMM, h:mm a').format(DateTime.parse(at).toLocal());
+                    } catch (_) {}
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Icon(Icons.fiber_manual_record, size: 10, color: AppTheme.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(t['status_message']?.toString() ?? 'Location update',
+                                style: const TextStyle(fontWeight: FontWeight.w600)),
+                            if (when.isNotEmpty)
+                              Text(when, style: const TextStyle(color: AppTheme.muted, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ]),
+                  );
+                }),
+              ],
+            ),
+          ],
+          const SizedBox(height: 20),
+          if (isDriver) _driverActions(status),
+        ],
+      ),
+    );
+  }
+
+  Widget _driverActions(String status) {
+    if (status == 'confirmed') {
+      return Column(children: [
+        PrimaryButton(
+          label: 'Mark as picked up',
+          icon: Icons.inventory_rounded,
+          loading: _updating,
+          onPressed: () => _setStatus('picked_up', 'Confirm load has been picked up?'),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: _updating ? null : () => _setStatus('cancelled', 'Cancel this booking?'),
+          icon: const Icon(Icons.close_rounded, color: AppTheme.danger),
+          label: const Text('Cancel booking', style: TextStyle(color: AppTheme.danger)),
+          style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.danger)),
+        ),
+      ]);
+    }
+    if (status == 'picked_up') {
+      return PrimaryButton(
+        label: 'Start trip',
+        icon: Icons.navigation_rounded,
+        loading: _updating,
+        onPressed: () => _setStatus('in_transit', 'Mark as in transit?'),
+      );
+    }
+    if (status == 'in_transit') {
+      return PrimaryButton(
+        label: 'Mark as delivered',
+        icon: Icons.task_alt_rounded,
+        loading: _updating,
+        onPressed: () => _setStatus('delivered', 'Confirm delivery is complete?'),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  Widget _routeRow(IconData icon, Color color, String city, String? addr) {
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(icon, size: 18, color: color),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(city, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+          if (addr != null && addr.isNotEmpty)
+            Text(addr, style: const TextStyle(color: AppTheme.muted, fontSize: 13)),
+        ]),
+      ),
+    ]);
+  }
+
+  Widget _row(String k, String v, {bool bold = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(children: [
+        Expanded(child: Text(k, style: const TextStyle(color: AppTheme.muted, fontSize: 13))),
+        Text(v, style: TextStyle(fontWeight: bold ? FontWeight.w800 : FontWeight.w600, fontSize: bold ? 16 : 14)),
+      ]),
+    );
+  }
+}
+
+class _Card extends StatelessWidget {
+  final List<Widget> children;
+  const _Card({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+    );
+  }
+}
+
+class _StatusBanner extends StatelessWidget {
+  final String status;
+  const _StatusBanner({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final (color, icon, title, subtitle) = switch (status) {
+      'confirmed' => (AppTheme.accent, Icons.check_circle_rounded, 'Confirmed', 'Head to pickup location'),
+      'picked_up' => (AppTheme.warning, Icons.inventory_rounded, 'Picked up', 'Load is on board'),
+      'in_transit' => (AppTheme.primary, Icons.local_shipping_rounded, 'In transit', 'On the way to delivery'),
+      'delivered' => (AppTheme.success, Icons.task_alt_rounded, 'Delivered', 'Trip complete'),
+      'cancelled' => (AppTheme.danger, Icons.cancel_rounded, 'Cancelled', 'Booking cancelled'),
+      _ => (AppTheme.muted, Icons.help_outline_rounded, status, ''),
+    };
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(children: [
+        Container(
+          width: 44, height: 44,
+          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
+          child: Icon(icon, color: Colors.white),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: TextStyle(fontWeight: FontWeight.w800, color: color, fontSize: 16)),
+            if (subtitle.isNotEmpty)
+              Text(subtitle, style: const TextStyle(color: AppTheme.muted, fontSize: 13)),
+          ]),
+        ),
+      ]),
+    );
+  }
+}
