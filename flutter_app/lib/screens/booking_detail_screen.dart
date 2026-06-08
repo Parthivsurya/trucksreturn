@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../core/api/booking_api.dart';
+import '../core/api/tracking_service.dart';
 import '../core/auth/auth_provider.dart';
 import '../core/theme.dart';
 import '../widgets/app_button.dart';
@@ -18,12 +19,68 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   BookingDetail? _detail;
   bool _loading = true;
   bool _updating = false;
+  bool _live = false;
   String? _error;
+  TrackingService? _tracker;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _load().then((_) => _startTracking());
+  }
+
+  @override
+  void dispose() {
+    _tracker?.dispose();
+    super.dispose();
+  }
+
+  void _startTracking() {
+    if (_detail == null) return;
+    final status = _detail!.booking['status']?.toString() ?? '';
+    if (status == 'delivered' || status == 'cancelled') return;
+    _tracker = TrackingService(
+      uuid: widget.uuid,
+      onConnection: (live) {
+        if (!mounted) return;
+        setState(() => _live = live);
+      },
+      onEvent: _handleEvent,
+    );
+    _tracker!.start();
+  }
+
+  void _handleEvent(TrackEvent ev) {
+    if (!mounted || _detail == null) return;
+    switch (ev.type) {
+      case 'tracking':
+        setState(() {
+          _detail = BookingDetail(
+            booking: _detail!.booking,
+            tracking: [..._detail!.tracking, ev.data],
+          );
+        });
+        break;
+      case 'status':
+        final newBooking = Map<String, dynamic>.from(_detail!.booking);
+        newBooking['status'] = ev.data['status'];
+        if (ev.data['picked_up_at'] != null) newBooking['picked_up_at'] = ev.data['picked_up_at'];
+        if (ev.data['delivered_at'] != null) newBooking['delivered_at'] = ev.data['delivered_at'];
+        setState(() => _detail = BookingDetail(booking: newBooking, tracking: _detail!.tracking));
+        break;
+      case 'snapshot':
+        final b = ev.data['booking'];
+        final t = ev.data['tracking'];
+        if (b is Map) {
+          setState(() => _detail = BookingDetail(
+                booking: Map<String, dynamic>.from(b),
+                tracking: (t is List)
+                    ? t.map((e) => Map<String, dynamic>.from(e as Map)).toList()
+                    : _detail!.tracking,
+              ));
+        }
+        break;
+    }
   }
 
   Future<void> _load() async {
@@ -73,7 +130,34 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Booking')),
+      appBar: AppBar(
+        title: const Text('Booking'),
+        actions: [
+          if (_tracker != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: (_live ? AppTheme.success : AppTheme.muted).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.circle, size: 8, color: _live ? AppTheme.success : AppTheme.muted),
+                    const SizedBox(width: 6),
+                    Text(_live ? 'LIVE' : 'POLLING',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: _live ? AppTheme.success : AppTheme.muted,
+                        )),
+                  ]),
+                ),
+              ),
+            ),
+        ],
+      ),
       body: SafeArea(
         child: _loading
             ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
