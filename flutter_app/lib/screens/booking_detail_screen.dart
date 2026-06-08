@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../core/api/booking_api.dart';
 import '../core/api/tracking_service.dart';
+import '../core/api/tracking_transmitter.dart';
 import '../core/auth/auth_provider.dart';
 import '../core/theme.dart';
 import '../widgets/app_button.dart';
@@ -22,6 +23,9 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   bool _live = false;
   String? _error;
   TrackingService? _tracker;
+  TrackingTransmitter? _transmitter;
+  bool _transmitterStarting = false;
+  String? _lastPingAt;
 
   @override
   void initState() {
@@ -32,7 +36,43 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   @override
   void dispose() {
     _tracker?.dispose();
+    _transmitter?.stop();
     super.dispose();
+  }
+
+  Future<void> _toggleTransmitter() async {
+    if (_transmitter != null) {
+      _transmitter!.stop();
+      setState(() => _transmitter = null);
+      return;
+    }
+    setState(() => _transmitterStarting = true);
+    final ok = await TrackingTransmitter.ensurePermission();
+    if (!mounted) return;
+    if (!ok) {
+      setState(() => _transmitterStarting = false);
+      showError(context, 'Location permission is required to share live position');
+      return;
+    }
+    final t = TrackingTransmitter(
+      uuid: widget.uuid,
+      onPing: (pos) {
+        if (!mounted) return;
+        setState(() => _lastPingAt = DateFormat('h:mm:ss a').format(DateTime.now()));
+      },
+      onError: (msg) {
+        if (mounted) showError(context, msg);
+      },
+    );
+    await t.start();
+    if (!mounted) {
+      t.stop();
+      return;
+    }
+    setState(() {
+      _transmitter = t;
+      _transmitterStarting = false;
+    });
   }
 
   void _startTracking() {
@@ -67,6 +107,11 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         if (ev.data['picked_up_at'] != null) newBooking['picked_up_at'] = ev.data['picked_up_at'];
         if (ev.data['delivered_at'] != null) newBooking['delivered_at'] = ev.data['delivered_at'];
         setState(() => _detail = BookingDetail(booking: newBooking, tracking: _detail!.tracking));
+        final s = ev.data['status']?.toString();
+        if (s == 'delivered' || s == 'cancelled') {
+          _transmitter?.stop();
+          if (mounted) setState(() => _transmitter = null);
+        }
         break;
       case 'snapshot':
         final b = ev.data['booking'];
@@ -329,22 +374,86 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       ]);
     }
     if (status == 'picked_up') {
-      return PrimaryButton(
-        label: 'Start trip',
-        icon: Icons.navigation_rounded,
-        loading: _updating,
-        onPressed: () => _setStatus('in_transit', 'Mark as in transit?'),
-      );
+      return Column(children: [
+        _transmitterCard(),
+        const SizedBox(height: 12),
+        PrimaryButton(
+          label: 'Start trip',
+          icon: Icons.navigation_rounded,
+          loading: _updating,
+          onPressed: () => _setStatus('in_transit', 'Mark as in transit?'),
+        ),
+      ]);
     }
     if (status == 'in_transit') {
-      return PrimaryButton(
-        label: 'Mark as delivered',
-        icon: Icons.task_alt_rounded,
-        loading: _updating,
-        onPressed: () => _setStatus('delivered', 'Confirm delivery is complete?'),
-      );
+      return Column(children: [
+        _transmitterCard(),
+        const SizedBox(height: 12),
+        PrimaryButton(
+          label: 'Mark as delivered',
+          icon: Icons.task_alt_rounded,
+          loading: _updating,
+          onPressed: () => _setStatus('delivered', 'Confirm delivery is complete?'),
+        ),
+      ]);
     }
     return const SizedBox.shrink();
+  }
+
+  Widget _transmitterCard() {
+    final on = _transmitter != null;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: on ? AppTheme.success : AppTheme.border, width: on ? 1.5 : 1),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              color: (on ? AppTheme.success : AppTheme.muted).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            alignment: Alignment.center,
+            child: Icon(on ? Icons.my_location_rounded : Icons.location_disabled_rounded,
+                size: 20, color: on ? AppTheme.success : AppTheme.muted),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(on ? 'Sharing live location' : 'Share live location',
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+              const SizedBox(height: 2),
+              Text(
+                on
+                    ? (_lastPingAt != null ? 'Last ping: $_lastPingAt' : 'Sending position…')
+                    : 'Shipper sees your truck on the map',
+                style: const TextStyle(color: AppTheme.muted, fontSize: 12),
+              ),
+            ]),
+          ),
+          Switch(
+            value: on,
+            onChanged: _transmitterStarting ? null : (_) => _toggleTransmitter(),
+            activeThumbColor: AppTheme.success,
+          ),
+        ]),
+        if (on && _transmitter?.lastPosition != null) ...[
+          const SizedBox(height: 12),
+          Row(children: [
+            const Icon(Icons.place_rounded, size: 14, color: AppTheme.muted),
+            const SizedBox(width: 6),
+            Text(
+              '${_transmitter!.lastPosition!.latitude.toStringAsFixed(5)}, ${_transmitter!.lastPosition!.longitude.toStringAsFixed(5)}',
+              style: const TextStyle(fontSize: 12, color: AppTheme.muted, fontFamily: 'monospace'),
+            ),
+          ]),
+        ],
+      ]),
+    );
   }
 
   Widget _routeRow(IconData icon, Color color, String city, String? addr) {
