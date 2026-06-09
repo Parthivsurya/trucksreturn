@@ -49,9 +49,34 @@ class _DriverHomeTabState extends State<DriverHomeTab> {
       if (_availability != null) {
         final matchesRes = await DriverApi.getMatches();
         if (matchesRes['matches'] is List) {
-          _matches = (matchesRes['matches'] as List)
+          final rawMatches = (matchesRes['matches'] as List)
               .map((e) => Map<String, dynamic>.from(e as Map))
               .toList();
+
+          // Calculate current dynamic free capacity
+          final double truckCapacity = _truck?['capacity_tons']?.toDouble() ?? 16.0;
+          final double baseAvailabilityCap = _availability?['available_capacity_tons']?.toDouble() ?? truckCapacity;
+
+          double bookedCapacity = 0.0;
+          int activeBookingsCount = 0;
+          for (var b in _bookings) {
+            final s = b['status']?.toString();
+            if (s == 'confirmed' || s == 'picked_up' || s == 'in_transit') {
+              bookedCapacity += (b['weight_tons'] as num?)?.toDouble() ?? 0.0;
+              activeBookingsCount++;
+            }
+          }
+
+          double freeCap = activeBookingsCount == 0 ? truckCapacity : (baseAvailabilityCap - bookedCapacity);
+          if (freeCap < 0) freeCap = 0.0;
+
+          // Filter matches by remaining free capacity
+          _matches = rawMatches.where((m) {
+            final weight = (m['weight_tons'] as num?)?.toDouble() ?? 0.0;
+            return weight <= freeCap;
+          }).toList();
+        } else {
+          _matches = [];
         }
       } else {
         _matches = [];

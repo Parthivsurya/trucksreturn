@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/api/driver_api.dart';
 import '../../core/cities.dart';
@@ -20,6 +21,9 @@ class _PostAvailabilityScreenState extends State<PostAvailabilityScreen> {
   String _selectedCapacityType = 'ltl'; // 'full' or 'ltl'
   bool _saving = false;
 
+  List<dynamic> _previewMatches = [];
+  bool _loadingCorridor = false;
+
   @override
   void initState() {
     super.initState();
@@ -27,6 +31,58 @@ class _PostAvailabilityScreenState extends State<PostAvailabilityScreen> {
     // Pre-populate with typical mockup data for demo feel
     _from = City(name: 'Kochi', state: 'Kerala', lat: 9.9312, lng: 76.2673);
     _to = City(name: 'Bangalore', state: 'Karnataka', lat: 12.9716, lng: 77.5946);
+
+    // Load city repository and update corridor matches
+    CityRepo.instance.load().then((_) {
+      if (mounted) {
+        _updateCorridorMatches();
+      }
+    });
+  }
+
+  Future<void> _updateCorridorMatches() async {
+    final from = _from;
+    final to = _to;
+    if (from == null || to == null) return;
+
+    setState(() => _loadingCorridor = true);
+    try {
+      double? cap;
+      if (_selectedCapacityType == 'ltl') {
+        cap = double.tryParse(_capacityController.text);
+      }
+      final res = await DriverApi.getMatches(
+        preview: true,
+        currentLat: from.lat,
+        currentLng: from.lng,
+        destLat: to.lat,
+        destLng: to.lng,
+        availableCapacityTons: cap,
+      );
+      if (mounted && _from == from && _to == to) {
+        setState(() {
+          _previewMatches = res['matches'] as List? ?? [];
+          _loadingCorridor = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _loadingCorridor = false);
+      }
+    }
+  }
+
+  double _haversineDistance(double lat1, double lng1, double lat2, double lng2) {
+    const r = 6371.0;
+    final dLat = (lat2 - lat1) * math.pi / 180.0;
+    final dLng = (lng2 - lng1) * math.pi / 180.0;
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1 * math.pi / 180.0) *
+            math.cos(lat2 * math.pi / 180.0) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return r * c;
   }
 
   Future<void> _loadTruck() async {
@@ -106,11 +162,109 @@ class _PostAvailabilityScreenState extends State<PostAvailabilityScreen> {
       _from = _to;
       _to = temp;
     });
+    _updateCorridorMatches();
   }
 
   @override
   Widget build(BuildContext context) {
     final double totalTons = (_truck?['capacity_tons'] as num?)?.toDouble() ?? 16.0;
+
+    // Compute dynamic waypoints
+    final List<Map<String, String>> waypoints = [];
+    if (_from != null && _to != null) {
+      final allCities = CityRepo.instance.all;
+      if (allCities.isNotEmpty) {
+        final List<Map<String, dynamic>> rawPoints = [];
+        for (int i = 0; i <= 10; i++) {
+          final t = i / 10.0;
+          final lat = _from!.lat + t * (_to!.lat - _from!.lat);
+          final lng = _from!.lng + t * (_to!.lng - _from!.lng);
+          
+          City closestCity = _from!;
+          double minDistance = double.infinity;
+          for (final city in allCities) {
+            final d = _haversineDistance(lat, lng, city.lat, city.lng);
+            if (d < minDistance) {
+              minDistance = d;
+              closestCity = city;
+            }
+          }
+          rawPoints.add({
+            'city': closestCity,
+            'pct': '${(t * 100).round()}%',
+            'type': i == 0 ? 'start' : (i == 10 ? 'end' : 'waypoint'),
+          });
+        }
+
+        // Deduplicate consecutive points
+        final List<Map<String, dynamic>> uniquePoints = [];
+        for (int i = 0; i < rawPoints.length; i++) {
+          final p = rawPoints[i];
+          final city = p['city'] as City;
+          if (i == 0) {
+            uniquePoints.add(p);
+          } else if (i == rawPoints.length - 1) {
+            if (uniquePoints.isNotEmpty && (uniquePoints.last['city'] as City).name == city.name) {
+              uniquePoints[uniquePoints.length - 1]['type'] = 'end';
+              uniquePoints[uniquePoints.length - 1]['pct'] = '100%';
+            } else {
+              uniquePoints.add(p);
+            }
+          } else {
+            final lastCity = uniquePoints.last['city'] as City;
+            if (city.name != lastCity.name && city.name != _to!.name) {
+              uniquePoints.add(p);
+            }
+          }
+        }
+
+        // Build list with tags and counts
+        for (final p in uniquePoints) {
+          final city = p['city'] as City;
+          final type = p['type'] as String;
+          final pct = p['pct'] as String;
+
+          String tag = '';
+          if (type == 'start') {
+            tag = 'Start · now';
+          } else if (type == 'end') {
+            tag = 'Destination';
+          } else {
+            if (_loadingCorridor) {
+              tag = 'Checking matches...';
+            } else {
+              int count = 0;
+              for (final load in _previewMatches) {
+                final loadLat = (load['pickup_lat'] as num).toDouble();
+                final loadLng = (load['pickup_lng'] as num).toDouble();
+                final dist = _haversineDistance(city.lat, city.lng, loadLat, loadLng);
+                if (dist <= 50.0) {
+                  count++;
+                }
+              }
+              tag = '$count load${count == 1 ? "" : "s"} within 50 km';
+            }
+          }
+
+          waypoints.add({
+            'city': city.name,
+            'tag': tag,
+            'type': type,
+            'pct': pct,
+          });
+        }
+      } else {
+        waypoints.addAll([
+          {'city': _from!.name, 'tag': 'Start · now', 'type': 'start', 'pct': '0%'},
+          {'city': _to!.name, 'tag': 'Destination', 'type': 'end', 'pct': '100%'},
+        ]);
+      }
+    } else {
+      waypoints.addAll([
+        {'city': 'Origin city', 'tag': 'Choose start location', 'type': 'start', 'pct': '0%'},
+        {'city': 'Destination city', 'tag': 'Choose destination location', 'type': 'end', 'pct': '100%'},
+      ]);
+    }
     
     return Scaffold(
       backgroundColor: AppTheme.bg,
@@ -151,7 +305,10 @@ class _PostAvailabilityScreenState extends State<PostAvailabilityScreen> {
                           label: 'Origin city',
                           icon: Icons.gps_fixed_rounded,
                           value: _from,
-                          onChanged: (c) => setState(() => _from = c),
+                          onChanged: (c) {
+                            setState(() => _from = c);
+                            _updateCorridorMatches();
+                          },
                         ),
                       ],
                     ),
@@ -198,7 +355,10 @@ class _PostAvailabilityScreenState extends State<PostAvailabilityScreen> {
                           label: 'Destination city',
                           icon: Icons.location_on_rounded,
                           value: _to,
-                          onChanged: (c) => setState(() => _to = c),
+                          onChanged: (c) {
+                            setState(() => _to = c);
+                            _updateCorridorMatches();
+                          },
                         ),
                       ],
                     ),
@@ -228,7 +388,10 @@ class _PostAvailabilityScreenState extends State<PostAvailabilityScreen> {
                             children: [
                               Expanded(
                                 child: InkWell(
-                                  onTap: () => setState(() => _selectedCapacityType = 'full'),
+                                  onTap: () {
+                                    setState(() => _selectedCapacityType = 'full');
+                                    _updateCorridorMatches();
+                                  },
                                   borderRadius: const BorderRadius.horizontal(left: Radius.circular(22)),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -255,7 +418,10 @@ class _PostAvailabilityScreenState extends State<PostAvailabilityScreen> {
                               Container(color: AppTheme.border, width: 1.5, height: 42),
                               Expanded(
                                 child: InkWell(
-                                  onTap: () => setState(() => _selectedCapacityType = 'ltl'),
+                                  onTap: () {
+                                    setState(() => _selectedCapacityType = 'ltl');
+                                    _updateCorridorMatches();
+                                  },
                                   borderRadius: const BorderRadius.horizontal(right: Radius.circular(22)),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -294,7 +460,10 @@ class _PostAvailabilityScreenState extends State<PostAvailabilityScreen> {
                               labelText: 'Free capacity (tons)',
                               prefixIcon: Icon(Icons.scale_rounded, color: AppTheme.muted),
                             ),
-                            onChanged: (_) => setState(() {}),
+                            onChanged: (_) {
+                              setState(() {});
+                              _updateCorridorMatches();
+                            },
                           ),
                           const SizedBox(height: 10),
                         ],
@@ -346,15 +515,28 @@ class _PostAvailabilityScreenState extends State<PostAvailabilityScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Corridor preview · 11 sample points',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.ink2),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Corridor preview · 11 sample points',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.ink2),
+                            ),
+                            if (_loadingCorridor)
+                              const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.0,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                          ],
                         ),
                         const SizedBox(height: 14),
                         // Visual Stepper corridor timeline
                         _CorridorVisualPreview(
-                          fromCity: _from?.name ?? 'Kochi',
-                          toCity: _to?.name ?? 'Bangalore',
+                          waypoints: waypoints,
                         ),
                       ],
                     ),
@@ -393,32 +575,14 @@ class _PostAvailabilityScreenState extends State<PostAvailabilityScreen> {
 }
 
 class _CorridorVisualPreview extends StatelessWidget {
-  final String fromCity;
-  final String toCity;
+  final List<Map<String, String>> waypoints;
 
   const _CorridorVisualPreview({
-    required this.fromCity,
-    required this.toCity,
+    required this.waypoints,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Generate realistic waypoints based on selected start/end
-    final List<Map<String, String>> waypoints = [
-      {'city': fromCity, 'tag': 'Start · now', 'type': 'start', 'pct': '0%'},
-      {'city': 'Coimbatore', 'tag': '2 loads within 50 km', 'type': 'waypoint', 'pct': '62%'},
-      {'city': 'Salem', 'tag': '4 loads within 50 km', 'type': 'waypoint', 'pct': '74%'},
-      {'city': 'Hosur', 'tag': '3 loads within 50 km', 'type': 'waypoint', 'pct': '91%'},
-      {'city': toCity, 'tag': 'Destination', 'type': 'end', 'pct': '100%'},
-    ];
-
-    // If custom names are typed, let's keep the intermediate waypoints standard for southern corridor mock
-    if (fromCity.toLowerCase() != 'kochi' || toCity.toLowerCase() != 'bangalore') {
-      waypoints[1] = {'city': 'Intermediate Point A', 'tag': 'Checking matches...', 'type': 'waypoint', 'pct': '30%'};
-      waypoints[2] = {'city': 'Intermediate Point B', 'tag': 'Checking matches...', 'type': 'waypoint', 'pct': '60%'};
-      waypoints[3] = {'city': 'Intermediate Point C', 'tag': 'Checking matches...', 'type': 'waypoint', 'pct': '80%'};
-    }
-
     return Stack(
       children: [
         // Line Rail
@@ -498,10 +662,9 @@ class _CorridorVisualPreview extends StatelessWidget {
                         Text(
                           wp['tag']!,
                           style: TextStyle(
-                            fontSize: 11.5,
-                            color: isWaypoint ? AppTheme.primary : AppTheme.muted,
-                            fontWeight: isWaypoint ? FontWeight.w700 : FontWeight.normal,
-                          ),
+                              fontSize: 11.5,
+                              color: isWaypoint ? AppTheme.primary : AppTheme.muted,
+                              fontWeight: isWaypoint ? FontWeight.w700 : FontWeight.normal),
                         ),
                       ],
                     ),

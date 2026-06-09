@@ -122,10 +122,22 @@ export async function cancelAvailability(req, res) {
 
 export async function getMatches(req, res) {
   try {
-    const { rows: [availability] } = await pool.query(
-      "SELECT * FROM driver_availability WHERE user_id = $1 AND status = 'active' ORDER BY created_at DESC LIMIT 1",
-      [req.user.id]
-    );
+    let availability;
+    if (req.query.preview === 'true') {
+      availability = {
+        current_lat: parseFloat(req.query.current_lat),
+        current_lng: parseFloat(req.query.current_lng),
+        dest_lat: parseFloat(req.query.dest_lat),
+        dest_lng: parseFloat(req.query.dest_lng),
+        available_capacity_tons: req.query.available_capacity_tons ? parseFloat(req.query.available_capacity_tons) : null,
+      };
+    } else {
+      const { rows: [activeAvail] } = await pool.query(
+        "SELECT * FROM driver_availability WHERE user_id = $1 AND status = 'active' ORDER BY created_at DESC LIMIT 1",
+        [req.user.id]
+      );
+      availability = activeAvail;
+    }
 
     if (!availability) {
       return res.json({ matches: [], message: 'No active availability. Set your return route first.' });

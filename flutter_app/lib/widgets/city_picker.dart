@@ -62,11 +62,22 @@ class _CityPickerSheet extends StatefulWidget {
 class _CityPickerSheetState extends State<_CityPickerSheet> {
   final _q = TextEditingController();
   List<City> _results = const [];
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _results = CityRepo.instance.search('');
+    _loadCities();
+  }
+
+  Future<void> _loadCities() async {
+    await CityRepo.instance.load();
+    if (mounted) {
+      setState(() {
+        _results = CityRepo.instance.search(_q.text);
+        _loading = false;
+      });
+    }
   }
 
   @override
@@ -111,29 +122,33 @@ class _CityPickerSheetState extends State<_CityPickerSheet> {
             ),
             const Divider(height: 1),
             Expanded(
-              child: ListView.separated(
-                itemCount: _results.length,
-                separatorBuilder: (_, _) => const Divider(height: 1, indent: 56),
-                itemBuilder: (_, i) {
-                  final c = _results[i];
-                  return ListTile(
-                    leading: Container(
-                      width: 36, height: 36,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.location_city_rounded,
-                          color: AppTheme.primary, size: 20),
+              child: _loading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: AppTheme.primary),
+                    )
+                  : ListView.separated(
+                      itemCount: _results.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1, indent: 56),
+                      itemBuilder: (_, i) {
+                        final c = _results[i];
+                        return ListTile(
+                          leading: Container(
+                            width: 36, height: 36,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.location_city_rounded,
+                                color: AppTheme.primary, size: 20),
+                          ),
+                          title: Text(c.name,
+                              style: const TextStyle(fontWeight: FontWeight.w600)),
+                          subtitle: Text(c.state,
+                              style: const TextStyle(color: AppTheme.muted, fontSize: 13)),
+                          onTap: () => Navigator.pop(context, c),
+                        );
+                      },
                     ),
-                    title: Text(c.name,
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(c.state,
-                        style: const TextStyle(color: AppTheme.muted, fontSize: 13)),
-                    onTap: () => Navigator.pop(context, c),
-                  );
-                },
-              ),
             ),
           ],
         ),

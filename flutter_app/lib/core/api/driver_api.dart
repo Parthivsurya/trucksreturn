@@ -84,8 +84,25 @@ class DriverApi {
     if (r.statusCode != 200) throw ApiException(extractResponseError(r), r.statusCode);
   }
 
-  static Future<Map<String, dynamic>> getMatches({double radiusKm = 50}) async {
-    final r = await _dio.get('/drivers/matches', queryParameters: {'radius': radiusKm});
+  static Future<Map<String, dynamic>> getMatches({
+    double radiusKm = 50,
+    bool preview = false,
+    double? currentLat,
+    double? currentLng,
+    double? destLat,
+    double? destLng,
+    double? availableCapacityTons,
+  }) async {
+    final Map<String, dynamic> query = {
+      'radius': radiusKm,
+      if (preview) 'preview': 'true',
+      'current_lat':? currentLat,
+      'current_lng':? currentLng,
+      'dest_lat':? destLat,
+      'dest_lng':? destLng,
+      'available_capacity_tons':? availableCapacityTons,
+    };
+    final r = await _dio.get('/drivers/matches', queryParameters: query);
     if (r.statusCode == 200 && r.data is Map) return Map<String, dynamic>.from(r.data);
     if (r.statusCode == 403) {
       throw ApiException(extractResponseError(r), 403);
