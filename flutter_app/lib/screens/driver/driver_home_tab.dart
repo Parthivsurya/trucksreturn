@@ -77,6 +77,31 @@ class _DriverHomeTabState extends State<DriverHomeTab> {
     final user = context.watch<AuthProvider>().user;
     final String formattedDate = DateFormat('EEEE · h:mm a').format(DateTime.now());
     
+    // Calculate availability time ago
+    String availabilityTimeAgo = '';
+    if (_availability != null) {
+      final createdAtStr = _availability!['created_at']?.toString();
+      if (createdAtStr != null) {
+        try {
+          final createdAt = DateTime.parse(createdAtStr).toLocal();
+          final diff = DateTime.now().difference(createdAt);
+          if (diff.inMinutes < 1) {
+            availabilityTimeAgo = 'set just now';
+          } else if (diff.inMinutes < 60) {
+            availabilityTimeAgo = 'set ${diff.inMinutes}m ago';
+          } else if (diff.inHours < 24) {
+            availabilityTimeAgo = 'set ${diff.inHours}h ago';
+          } else {
+            availabilityTimeAgo = 'set ${diff.inDays}d ago';
+          }
+        } catch (_) {
+          availabilityTimeAgo = 'set recently';
+        }
+      } else {
+        availabilityTimeAgo = 'set recently';
+      }
+    }
+
     // Calculate stats
     final int matchedCount = _matches.length;
     double activeBookedEarnings = 0.0;
@@ -237,10 +262,10 @@ class _DriverHomeTabState extends State<DriverHomeTab> {
                                     ],
                                   ),
                                 ),
-                                const Text(
-                                  'set 2h ago', // Static mock indicator
-                                  style: TextStyle(fontSize: 11.5, color: AppTheme.muted),
-                                ),
+                                 Text(
+                                   availabilityTimeAgo,
+                                   style: const TextStyle(fontSize: 11.5, color: AppTheme.muted),
+                                 ),
                               ],
                             ),
                             const SizedBox(height: 16),
