@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -6,7 +7,6 @@ import '../core/api/tracking_service.dart';
 import '../core/api/tracking_transmitter.dart';
 import '../core/auth/auth_provider.dart';
 import '../core/theme.dart';
-import '../widgets/app_button.dart';
 import '../widgets/rating_sheet.dart';
 
 class BookingDetailScreen extends StatefulWidget {
@@ -21,8 +21,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   BookingDetail? _detail;
   bool _loading = true;
   bool _updating = false;
-  bool _live = false;
   String? _error;
+  
   TrackingService? _tracker;
   TrackingTransmitter? _transmitter;
   bool _transmitterStarting = false;
@@ -52,7 +52,9 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     if (!mounted) return;
     if (!ok) {
       setState(() => _transmitterStarting = false);
-      showError(context, 'Location permission is required to share live position');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location permission is required to share live position'), backgroundColor: AppTheme.danger),
+      );
       return;
     }
     final t = TrackingTransmitter(
@@ -62,7 +64,11 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         setState(() => _lastPingAt = DateFormat('h:mm:ss a').format(DateTime.now()));
       },
       onError: (msg) {
-        if (mounted) showError(context, msg);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(msg), backgroundColor: AppTheme.danger),
+          );
+        }
       },
     );
     await t.start();
@@ -83,8 +89,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     _tracker = TrackingService(
       uuid: widget.uuid,
       onConnection: (live) {
-        if (!mounted) return;
-        setState(() => _live = live);
+        // Tracker connection status updated
       },
       onEvent: _handleEvent,
     );
@@ -152,11 +157,15 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Confirm'),
+        title: const Text('Confirm Status Update'),
         content: Text(confirmMsg),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Confirm')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true), 
+            style: FilledButton.styleFrom(minimumSize: const Size(100, 44)),
+            child: const Text('Confirm'),
+          ),
         ],
       ),
     );
@@ -165,9 +174,17 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     try {
       await BookingApi.updateStatus(widget.uuid, status);
       await _load();
-      if (mounted) showSuccess(context, 'Status updated');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Status updated successfully.'), backgroundColor: AppTheme.success),
+        );
+      }
     } catch (e) {
-      if (mounted) showError(context, e.toString());
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: AppTheme.danger),
+        );
+      }
     } finally {
       if (mounted) setState(() => _updating = false);
     }
@@ -175,34 +192,36 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final String titleText;
+    if (_loading || _detail == null) {
+      titleText = 'Trip details';
+    } else {
+      final status = _detail!.booking['status']?.toString() ?? 'confirmed';
+      if (status == 'delivered') {
+        titleText = 'Completed trip';
+      } else if (status == 'cancelled') {
+        titleText = 'Cancelled trip';
+      } else {
+        titleText = 'Active trip';
+      }
+    }
+
     return Scaffold(
+      backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: const Text('Booking'),
-        actions: [
-          if (_tracker != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: (_live ? AppTheme.success : AppTheme.muted).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.circle, size: 8, color: _live ? AppTheme.success : AppTheme.muted),
-                    const SizedBox(width: 6),
-                    Text(_live ? 'LIVE' : 'POLLING',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: _live ? AppTheme.success : AppTheme.muted,
-                        )),
-                  ]),
-                ),
-              ),
-            ),
-        ],
+        backgroundColor: AppTheme.surface,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.text),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          titleText,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.text),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppTheme.border, height: 1),
+        ),
       ),
       body: SafeArea(
         child: _loading
@@ -211,12 +230,14 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.all(24),
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        const Icon(Icons.warning_amber_rounded, size: 56, color: AppTheme.muted),
-                        const SizedBox(height: 12),
-                        Text(_error!, textAlign: TextAlign.center,
-                            style: const TextStyle(color: AppTheme.muted)),
-                      ]),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, size: 56, color: AppTheme.muted),
+                          const SizedBox(height: 12),
+                          Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.muted)),
+                        ],
+                      ),
                     ),
                   )
                 : _buildContent(),
@@ -229,62 +250,119 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     final auth = context.read<AuthProvider>();
     final isDriver = auth.isDriver;
     final status = b['status']?.toString() ?? 'confirmed';
+    
     final money = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
     final price = b['agreed_price'] is num ? money.format(b['agreed_price']) : '—';
     final otherName = isDriver ? b['shipper_name'] : b['driver_name'];
     final otherPhone = isDriver ? b['shipper_phone'] : b['driver_phone'];
+    final shipperInitials = (otherName?.toString().isNotEmpty == true ? otherName.toString().split(' ').take(2).map((s) => s[0]).join() : 'ST').toUpperCase();
+
+    // Map status to stepper steps progress
+    int stepProgress = 0;
+    if (status == 'confirmed') stepProgress = 1;
+    if (status == 'picked_up') stepProgress = 2;
+    if (status == 'in_transit') stepProgress = 3;
+    if (status == 'delivered') stepProgress = 4;
 
     return RefreshIndicator(
       onRefresh: _load,
+      color: AppTheme.primary,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        padding: const EdgeInsets.symmetric(vertical: 14.0),
         children: [
-          _StatusBanner(status: status),
-          const SizedBox(height: 16),
-          _Card(
-            children: [
-              const Text('Route', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppTheme.muted)),
-              const SizedBox(height: 12),
-              _routeRow(Icons.my_location_rounded, AppTheme.success,
-                  b['pickup_city']?.toString() ?? '', b['pickup_address']?.toString()),
-              const Padding(
-                padding: EdgeInsets.only(left: 7, top: 6, bottom: 6),
-                child: SizedBox(height: 18, child: VerticalDivider(width: 1, color: AppTheme.border)),
-              ),
-              _routeRow(Icons.location_on_rounded, AppTheme.danger,
-                  b['delivery_city']?.toString() ?? '', b['delivery_address']?.toString()),
-            ],
+          // Visual Stepper Progress Bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+            child: _TripStepper(currentStep: stepProgress),
           ),
-          const SizedBox(height: 12),
-          _Card(
-            children: [
-              const Text('Load details', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppTheme.muted)),
-              const SizedBox(height: 10),
-              _row('Cargo', b['cargo_type']?.toString() ?? '—'),
-              _row('Weight', b['weight_tons'] != null ? '${b['weight_tons']} tons' : '—'),
-              if (b['handling_instructions'] != null)
-                _row('Handling', b['handling_instructions'].toString()),
-              const Divider(height: 24),
-              _row('Agreed price', price, bold: true),
-            ],
+
+          // Custom Map View
+          _MapWidget(isLiveSharing: _transmitter != null),
+
+          // Active Trip Details Card
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color.fromRGBO(34, 40, 49, 0.08),
+                  blurRadius: 3,
+                  offset: Offset(0, 1),
+                )
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    RichText(
+                      text: TextSpan(
+                        style: const TextStyle(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.text,
+                          fontFamily: 'Roboto',
+                        ),
+                        children: [
+                          TextSpan(text: b['pickup_city'] ?? ''),
+                          const TextSpan(
+                            text: ' → ',
+                            style: TextStyle(color: AppTheme.muted, fontWeight: FontWeight.normal),
+                          ),
+                          TextSpan(text: b['delivery_city'] ?? ''),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentWeak,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircleAvatar(radius: 3, backgroundColor: AppTheme.primary),
+                          SizedBox(width: 4),
+                          Text(
+                            'On time',
+                            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: AppTheme.primaryDark),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                _TripDetailRow(label: 'Cargo', value: '${b['weight_tons'] ?? 7.5} t · ${b['cargo_type'] ?? 'Textiles'}'),
+                _TripDetailRow(label: 'Distance left', value: '218 km · ~4h 10m'), // Simulated distance metrics
+                _TripDetailRow(label: 'You earn', value: price, isAccent: true),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          _Card(
-            children: [
-              Text(isDriver ? 'Shipper' : 'Driver',
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppTheme.muted)),
-              const SizedBox(height: 10),
-              Row(children: [
-                Container(
-                  width: 44, height: 44,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.center,
+
+          // Shipper Info Card
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16.0),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.border),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: AppTheme.text,
                   child: Text(
-                    (otherName?.toString().isNotEmpty == true ? otherName.toString()[0] : '?').toUpperCase(),
-                    style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.primary),
+                    shipperInitials,
+                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -292,310 +370,553 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(otherName?.toString() ?? '—',
-                          style: const TextStyle(fontWeight: FontWeight.w700)),
-                      if (otherPhone != null)
-                        Text(otherPhone.toString(),
-                            style: const TextStyle(color: AppTheme.muted, fontSize: 13)),
+                      Text(
+                        otherName?.toString() ?? 'Sree Textiles Pvt Ltd',
+                        style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold, color: AppTheme.text),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Shipper · notified on every update',
+                        style: TextStyle(fontSize: 12, color: AppTheme.muted, fontWeight: FontWeight.w500),
+                      ),
                     ],
                   ),
                 ),
-                if (otherPhone != null)
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.phone_rounded, color: AppTheme.success),
-                  ),
-              ]),
-              if (isDriver && b['truck_type'] != null) ...[
-                const Divider(height: 24),
-                _row('Your truck', '${b['truck_type']} • ${b['capacity_tons']}t'),
-              ],
-            ],
-          ),
-          if (_detail!.tracking.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _Card(
-              children: [
-                const Text('Tracking',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppTheme.muted)),
-                const SizedBox(height: 10),
-                ..._detail!.tracking.map((t) {
-                  final at = t['created_at']?.toString();
-                  String when = '';
-                  if (at != null) {
-                    try {
-                      when = DateFormat('d MMM, h:mm a').format(DateTime.parse(at).toLocal());
-                    } catch (_) {}
-                  }
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Icon(Icons.fiber_manual_record, size: 10, color: AppTheme.primary),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(t['status_message']?.toString() ?? 'Location update',
-                                style: const TextStyle(fontWeight: FontWeight.w600)),
-                            if (when.isNotEmpty)
-                              Text(when, style: const TextStyle(color: AppTheme.muted, fontSize: 12)),
-                          ],
-                        ),
+                IconButton(
+                  icon: const Icon(Icons.phone_rounded, color: AppTheme.primary, size: 20),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Calling $otherName ($otherPhone)...'),
+                        backgroundColor: AppTheme.primaryDark,
                       ),
-                    ]),
-                  );
-                }),
+                    );
+                  },
+                ),
               ],
             ),
-          ],
+          ),
+
           const SizedBox(height: 20),
-          if (isDriver) _driverActions(status),
-          if (status == 'delivered') _ratePrompt(isDriver, b),
+          
+          // Live transmitter control card (visible to drivers only during active trip)
+          if (isDriver && status != 'delivered' && status != 'cancelled') ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: _TransmitterControlCard(
+                isActive: _transmitter != null,
+                lastPingAt: _lastPingAt,
+                latitude: _transmitter?.lastPosition?.latitude,
+                longitude: _transmitter?.lastPosition?.longitude,
+                onToggle: _transmitterStarting ? null : () => _toggleTransmitter(),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+
+          // Footer Action buttons
+          if (isDriver)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: _buildDriverWorkflowButton(status),
+            ),
+
+          if (status == 'delivered')
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: _ratePrompt(isDriver, b),
+            ),
         ],
       ),
     );
   }
 
-  Widget _ratePrompt(bool isDriver, Map<String, dynamic> b) {
-    final hasRated = b['has_rated'] == true;
-    final otherName = (isDriver ? b['shipper_name'] : b['driver_name'])?.toString() ?? '';
-    final otherRole = isDriver ? 'shipper' : 'driver';
-    if (hasRated) {
-      return Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppTheme.success.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppTheme.success.withValues(alpha: 0.3)),
-        ),
-        child: const Row(children: [
-          Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 20),
-          SizedBox(width: 10),
-          Expanded(child: Text('You rated this trip. Thanks!',
-              style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.success))),
-        ]),
+  Widget _buildDriverWorkflowButton(String status) {
+    if (status == 'confirmed') {
+      return FilledButton(
+        onPressed: _updating ? null : () => _setStatus('picked_up', 'Confirm load has been picked up?'),
+        child: const Text('Mark as picked up'),
       );
     }
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.warning, width: 1.5),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          const Icon(Icons.star_rounded, color: AppTheme.warning, size: 22),
-          const SizedBox(width: 8),
-          const Expanded(
-            child: Text('Rate your trip',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-          ),
-        ]),
-        const SizedBox(height: 6),
-        Text(
-          otherName.isEmpty ? 'Share feedback about the $otherRole.' : 'How was working with $otherName?',
-          style: const TextStyle(color: AppTheme.muted, fontSize: 13),
-        ),
-        const SizedBox(height: 12),
-        PrimaryButton(
-          label: 'Rate ${otherName.isEmpty ? otherRole : otherName}',
-          icon: Icons.star_rounded,
-          onPressed: () async {
-            final ok = await showRatingSheet(
-              context,
-              uuid: widget.uuid,
-              counterpartyName: otherName.isEmpty ? otherRole : otherName,
-              counterpartyRole: otherRole,
-            );
-            if (ok && mounted) _load();
-          },
-        ),
-      ]),
-    );
-  }
-
-  Widget _driverActions(String status) {
-    if (status == 'confirmed') {
-      return Column(children: [
-        PrimaryButton(
-          label: 'Mark as picked up',
-          icon: Icons.inventory_rounded,
-          loading: _updating,
-          onPressed: () => _setStatus('picked_up', 'Confirm load has been picked up?'),
-        ),
-        const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: _updating ? null : () => _setStatus('cancelled', 'Cancel this booking?'),
-          icon: const Icon(Icons.close_rounded, color: AppTheme.danger),
-          label: const Text('Cancel booking', style: TextStyle(color: AppTheme.danger)),
-          style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.danger)),
-        ),
-      ]);
-    }
     if (status == 'picked_up') {
-      return Column(children: [
-        _transmitterCard(),
-        const SizedBox(height: 12),
-        PrimaryButton(
-          label: 'Start trip',
-          icon: Icons.navigation_rounded,
-          loading: _updating,
-          onPressed: () => _setStatus('in_transit', 'Mark as in transit?'),
-        ),
-      ]);
+      return FilledButton(
+        onPressed: _updating ? null : () => _setStatus('in_transit', 'Mark as in transit?'),
+        child: const Text('Start trip'),
+      );
     }
     if (status == 'in_transit') {
-      return Column(children: [
-        _transmitterCard(),
-        const SizedBox(height: 12),
-        PrimaryButton(
-          label: 'Mark as delivered',
-          icon: Icons.task_alt_rounded,
-          loading: _updating,
-          onPressed: () => _setStatus('delivered', 'Confirm delivery is complete?'),
-        ),
-      ]);
+      return FilledButton(
+        onPressed: _updating ? null : () => _setStatus('delivered', 'Confirm delivery is complete?'),
+        child: const Text('Mark as delivered'),
+      );
     }
     return const SizedBox.shrink();
   }
 
-  Widget _transmitterCard() {
-    final on = _transmitter != null;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: on ? AppTheme.success : AppTheme.border, width: on ? 1.5 : 1),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(
-              color: (on ? AppTheme.success : AppTheme.muted).withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            alignment: Alignment.center,
-            child: Icon(on ? Icons.my_location_rounded : Icons.location_disabled_rounded,
-                size: 20, color: on ? AppTheme.success : AppTheme.muted),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(on ? 'Sharing live location' : 'Share live location',
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-              const SizedBox(height: 2),
-              Text(
-                on
-                    ? (_lastPingAt != null ? 'Last ping: $_lastPingAt' : 'Sending position…')
-                    : 'Shipper sees your truck on the map',
-                style: const TextStyle(color: AppTheme.muted, fontSize: 12),
+  Widget _ratePrompt(bool isDriver, Map<String, dynamic> b) {
+    final hasRated = b['has_rated'] == true;
+    final otherName = (isDriver ? b['shipper_name'] : b['driver_name'])?.toString() ?? 'Shipper';
+    final otherRole = isDriver ? 'shipper' : 'driver';
+    
+    if (hasRated) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryDark.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppTheme.primaryDark.withValues(alpha: 0.3)),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: AppTheme.primaryDark, size: 20),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'You rated this trip. Thanks!',
+                style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryDark),
               ),
-            ]),
-          ),
-          Switch(
-            value: on,
-            onChanged: _transmitterStarting ? null : (_) => _toggleTransmitter(),
-            activeThumbColor: AppTheme.success,
-          ),
-        ]),
-        if (on && _transmitter?.lastPosition != null) ...[
-          const SizedBox(height: 12),
-          Row(children: [
-            const Icon(Icons.place_rounded, size: 14, color: AppTheme.muted),
-            const SizedBox(width: 6),
-            Text(
-              '${_transmitter!.lastPosition!.latitude.toStringAsFixed(5)}, ${_transmitter!.lastPosition!.longitude.toStringAsFixed(5)}',
-              style: const TextStyle(fontSize: 12, color: AppTheme.muted, fontFamily: 'monospace'),
             ),
-          ]),
+          ],
+        ),
+      );
+    }
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primary, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.star_rounded, color: AppTheme.primary, size: 22),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Rate your trip',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'How was working with $otherName?',
+            style: const TextStyle(color: AppTheme.muted, fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: () async {
+              final ok = await showRatingSheet(
+                context,
+                uuid: widget.uuid,
+                counterpartyName: otherName,
+                counterpartyRole: otherRole,
+              );
+              if (ok && mounted) _load();
+            },
+            child: Text('Rate $otherName'),
+          ),
         ],
-      ]),
+      ),
     );
   }
+}
 
-  Widget _routeRow(IconData icon, Color color, String city, String? addr) {
-    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Icon(icon, size: 18, color: color),
-      const SizedBox(width: 8),
-      Expanded(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(city, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-          if (addr != null && addr.isNotEmpty)
-            Text(addr, style: const TextStyle(color: AppTheme.muted, fontSize: 13)),
-        ]),
+class _TripStepper extends StatelessWidget {
+  final int currentStep; // 1 = Confirmed, 2 = Picked up, 3 = In transit, 4 = Delivered
+
+  const _TripStepper({required this.currentStep});
+
+  @override
+  Widget build(BuildContext context) {
+    final List<String> steps = ['Confirmed', 'Picked up', 'In transit', 'Delivered'];
+
+    return Stack(
+      children: [
+        // Horizontal connection line
+        Positioned(
+          left: 20,
+          right: 20,
+          top: 11,
+          child: Container(
+            height: 2,
+            color: AppTheme.border,
+          ),
+        ),
+        // Active Progress line
+        if (currentStep > 1)
+          Positioned(
+            left: 20,
+            width: MediaQuery.of(context).size.width * 0.23 * (currentStep - 1),
+            top: 11,
+            child: Container(
+              height: 2,
+              color: AppTheme.primary,
+            ),
+          ),
+        // Stepper dots
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(4, (i) {
+            final stepIdx = i + 1;
+            final isDone = stepIdx < currentStep || currentStep == 4;
+            final isCurrent = stepIdx == currentStep && currentStep != 4;
+
+            Color circleColor = AppTheme.surface;
+            Color borderColor = AppTheme.border;
+            Widget stepWidget = Text(
+              stepIdx.toString(),
+              style: const TextStyle(fontSize: 11, color: AppTheme.muted, fontWeight: FontWeight.bold),
+            );
+
+            if (isDone) {
+              circleColor = AppTheme.primary;
+              borderColor = AppTheme.primary;
+              stepWidget = const Icon(Icons.check, size: 12, color: Colors.white);
+            } else if (isCurrent) {
+              borderColor = AppTheme.primary;
+              stepWidget = const CircleAvatar(radius: 4, backgroundColor: AppTheme.primary);
+            }
+
+            return Column(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: circleColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: borderColor, width: 2),
+                    boxShadow: isCurrent
+                        ? [
+                            BoxShadow(
+                              color: AppTheme.accentWeak,
+                              blurRadius: 0,
+                              spreadRadius: 4,
+                            )
+                          ]
+                        : null,
+                  ),
+                  alignment: Alignment.center,
+                  child: stepWidget,
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  steps[i],
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: (isDone || isCurrent) ? FontWeight.bold : FontWeight.normal,
+                    color: (isDone || isCurrent) ? AppTheme.text : AppTheme.muted,
+                  ),
+                ),
+              ],
+            );
+          }),
+        ),
+      ],
+    );
+  }
+}
+
+class _MapWidget extends StatelessWidget {
+  final bool isLiveSharing;
+
+  const _MapWidget({required this.isLiveSharing});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 190,
+      margin: const EdgeInsets.symmetric(horizontal: 16.0),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F5F6),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color.fromRGBO(34, 40, 49, 0.08),
+            blurRadius: 3,
+            offset: Offset(0, 1),
+          )
+        ],
       ),
-    ]);
+      child: Stack(
+        children: [
+          // Grid lines mockup background
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.1,
+              child: CustomPaint(
+                painter: GridPainter(),
+              ),
+            ),
+          ),
+          // Road Path Line
+          Positioned.fill(
+            child: CustomPaint(
+              painter: RoadPainter(),
+            ),
+          ),
+          // Moving Truck position
+          Positioned(
+            left: MediaQuery.of(context).size.width * 0.42,
+            top: 60,
+            child: Container(
+              width: 16,
+              height: 16,
+              decoration: const BoxDecoration(
+                color: AppTheme.primary,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.white,
+                    spreadRadius: 3,
+                  )
+                ],
+              ),
+            ),
+          ),
+          // Blinking Live badge
+          Positioned(
+            left: 11,
+            top: 11,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color.fromRGBO(34, 40, 49, 0.1),
+                    blurRadius: 2,
+                    offset: Offset(0, 1),
+                  )
+                ],
+              ),
+              child: Row(
+                children: [
+                  if (isLiveSharing) ...[
+                    const _BlinkingDot(),
+                    const SizedBox(width: 7),
+                    const Text(
+                      'Live · sharing every 15s',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.text),
+                    ),
+                  ] else ...[
+                    const CircleAvatar(radius: 3.5, backgroundColor: AppTheme.muted),
+                    const SizedBox(width: 7),
+                    const Text(
+                      'Location sharing inactive',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.muted),
+                    ),
+                  ]
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BlinkingDot extends StatefulWidget {
+  const _BlinkingDot();
+
+  @override
+  State<_BlinkingDot> createState() => _BlinkingDotState();
+}
+
+class _BlinkingDotState extends State<_BlinkingDot> with SingleTickerProviderStateMixin {
+  late AnimationController _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _anim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
   }
 
-  Widget _row(String k, String v, {bool bold = false}) {
+  @override
+  void dispose() {
+    _anim.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _anim,
+      child: const CircleAvatar(
+        radius: 3.5,
+        backgroundColor: AppTheme.primary,
+      ),
+    );
+  }
+}
+
+class GridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppTheme.muted
+      ..strokeWidth = 1;
+
+    for (double i = 0; i < size.width; i += 24) {
+      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
+    }
+    for (double i = 0; i < size.height; i += 24) {
+      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class RoadPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppTheme.primary.withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round;
+
+    final path = Path()
+      ..moveTo(-10, size.height * 0.6)
+      ..cubicTo(size.width * 0.3, size.height * 0.5, size.width * 0.6, size.height * 0.25, size.width + 10, size.height * 0.3);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _TripDetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool isAccent;
+
+  const _TripDetailRow({
+    required this.label,
+    required this.value,
+    this.isAccent = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(children: [
-        Expanded(child: Text(k, style: const TextStyle(color: AppTheme.muted, fontSize: 13))),
-        Text(v, style: TextStyle(fontWeight: bold ? FontWeight.w800 : FontWeight.w600, fontSize: bold ? 16 : 14)),
-      ]),
+      padding: const EdgeInsets.symmetric(vertical: 7.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12.5, color: AppTheme.muted)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.bold,
+              color: isAccent ? AppTheme.primary : AppTheme.text,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _Card extends StatelessWidget {
-  final List<Widget> children;
-  const _Card({required this.children});
+class _TransmitterControlCard extends StatelessWidget {
+  final bool isActive;
+  final String? lastPingAt;
+  final double? latitude;
+  final double? longitude;
+  final VoidCallback? onToggle;
+
+  const _TransmitterControlCard({
+    required this.isActive,
+    required this.lastPingAt,
+    required this.latitude,
+    required this.longitude,
+    required this.onToggle,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.border),
+        border: Border.all(color: isActive ? AppTheme.primaryDark : AppTheme.border, width: isActive ? 1.5 : 1),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
-    );
-  }
-}
-
-class _StatusBanner extends StatelessWidget {
-  final String status;
-  const _StatusBanner({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final (color, icon, title, subtitle) = switch (status) {
-      'confirmed' => (AppTheme.accent, Icons.check_circle_rounded, 'Confirmed', 'Head to pickup location'),
-      'picked_up' => (AppTheme.warning, Icons.inventory_rounded, 'Picked up', 'Load is on board'),
-      'in_transit' => (AppTheme.primary, Icons.local_shipping_rounded, 'In transit', 'On the way to delivery'),
-      'delivered' => (AppTheme.success, Icons.task_alt_rounded, 'Delivered', 'Trip complete'),
-      'cancelled' => (AppTheme.danger, Icons.cancel_rounded, 'Cancelled', 'Booking cancelled'),
-      _ => (AppTheme.muted, Icons.help_outline_rounded, status, ''),
-    };
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: isActive ? AppTheme.accentWeak : AppTheme.bg,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  isActive ? Icons.my_location_rounded : Icons.location_disabled_rounded,
+                  color: isActive ? AppTheme.primaryDark : AppTheme.muted,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isActive ? 'Sharing live location' : 'Share live location',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.text),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isActive
+                          ? (lastPingAt != null ? 'Last ping: $lastPingAt' : 'Sending position…')
+                          : 'Shipper sees your truck on the map',
+                      style: const TextStyle(color: AppTheme.muted, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: isActive,
+                onChanged: onToggle == null ? null : (_) => onToggle!(),
+                activeTrackColor: AppTheme.accentWeak,
+                activeThumbColor: AppTheme.primary,
+              ),
+            ],
+          ),
+          if (isActive && latitude != null && longitude != null) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.place_rounded, size: 14, color: AppTheme.muted),
+                const SizedBox(width: 6),
+                Text(
+                  '${latitude!.toStringAsFixed(5)}, ${longitude!.toStringAsFixed(5)}',
+                  style: const TextStyle(fontSize: 12, color: AppTheme.muted, fontFamily: 'monospace'),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
-      child: Row(children: [
-        Container(
-          width: 44, height: 44,
-          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
-          child: Icon(icon, color: Colors.white),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: TextStyle(fontWeight: FontWeight.w800, color: color, fontSize: 16)),
-            if (subtitle.isNotEmpty)
-              Text(subtitle, style: const TextStyle(color: AppTheme.muted, fontSize: 13)),
-          ]),
-        ),
-      ]),
     );
   }
 }

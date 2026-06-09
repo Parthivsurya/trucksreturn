@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
+import 'truck_register_screen.dart';
+import 'verification_screen.dart';
+import 'driver_notifications_screen.dart';
+import 'driver_help_support_screen.dart';
 
 class DriverProfileTab extends StatelessWidget {
   const DriverProfileTab({super.key});
@@ -58,17 +62,72 @@ class DriverProfileTab extends StatelessWidget {
             ]),
           ),
           const SizedBox(height: 20),
-          _MenuItem(icon: Icons.local_shipping_rounded, label: 'Truck details', onTap: () {}),
-          _MenuItem(icon: Icons.verified_user_rounded, label: 'Verification', onTap: () {}),
-          _MenuItem(icon: Icons.notifications_outlined, label: 'Notifications', onTap: () {}),
-          _MenuItem(icon: Icons.help_outline_rounded, label: 'Help & support', onTap: () {}),
+          _MenuItem(
+            icon: Icons.local_shipping_rounded,
+            label: 'Truck details',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TruckRegisterScreen()),
+            ),
+          ),
+          _MenuItem(
+            icon: Icons.verified_user_rounded,
+            label: 'Verification',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const VerificationScreen()),
+            ),
+          ),
+          _MenuItem(
+            icon: Icons.notifications_outlined,
+            label: 'Notifications',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DriverNotificationsScreen()),
+            ),
+          ),
+          _MenuItem(
+            icon: Icons.help_outline_rounded,
+            label: 'Help & support',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DriverHelpSupportScreen()),
+            ),
+          ),
           const SizedBox(height: 20),
           OutlinedButton.icon(
-            onPressed: auth.logout,
+            onPressed: () async {
+              final ok = await showDialog<bool>(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: const Text('Log out'),
+                  content: const Text('Are you sure you want to log out of your account?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppTheme.danger,
+                        minimumSize: const Size(100, 44),
+                      ),
+                      child: const Text('Log out'),
+                    ),
+                  ],
+                ),
+              );
+              if (ok == true) {
+                auth.logout();
+              }
+            },
             icon: const Icon(Icons.logout_rounded, color: AppTheme.danger),
             label: const Text('Log out', style: TextStyle(color: AppTheme.danger)),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: AppTheme.danger),
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
         ],

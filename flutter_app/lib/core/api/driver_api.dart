@@ -40,8 +40,14 @@ class DriverApi {
     try {
       final r = await _dio.get('/drivers/availability');
       if (r.statusCode == 200 && r.data is Map) {
-        final m = Map<String, dynamic>.from(r.data);
-        if (m['availability'] != null) return Map<String, dynamic>.from(m['availability']);
+        final list = r.data['availability'];
+        if (list is List && list.isNotEmpty) {
+          final active = list.cast<Map>().firstWhere(
+            (e) => e['status'] == 'active',
+            orElse: () => list.first as Map,
+          );
+          return Map<String, dynamic>.from(active);
+        }
       }
       return null;
     } on DioException { return null; }
@@ -64,8 +70,8 @@ class DriverApi {
       'dest_lng': destLng,
       'current_city': currentCity,
       'destination_city': destinationCity,
-      if (availableUntil != null) 'available_until': availableUntil,
-      if (availableCapacityTons != null) 'available_capacity_tons': availableCapacityTons,
+      'available_until':? availableUntil,
+      'available_capacity_tons':? availableCapacityTons,
     });
     if (r.statusCode == 200 || r.statusCode == 201) {
       return Map<String, dynamic>.from(r.data);

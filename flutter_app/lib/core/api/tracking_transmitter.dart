@@ -64,7 +64,7 @@ class TrackingTransmitter {
       await ApiClient.instance.dio.post('/bookings/$uuid/track', data: {
         'lat': pos.latitude,
         'lng': pos.longitude,
-        if (message != null) 'status_message': message,
+        'status_message':? message,
       });
     } catch (e) {
       onError(e.toString());

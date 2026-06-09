@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const Color primary = Color(0xFFFF6B35);
-  static const Color primaryDark = Color(0xFFE85826);
-  static const Color accent = Color(0xFF1A535C);
-  static const Color bg = Color(0xFFF7F7F2);
+  // Color Hunt palette: 222831 / 393E46 / 00ADB5 / EEEEEE
+  static const Color primary = Color(0xFF00ADB5);      // Teal accent
+  static const Color primaryDark = Color(0xFF00868C);  // Deep accent
+  static const Color accent = Color(0xFF00ADB5);       // Accent
+  static const Color accentWeak = Color(0xFFE0F4F5);   // Light accent background
+  static const Color bg = Color(0xFFEEEEEE);           // Light gray background
   static const Color surface = Colors.white;
-  static const Color text = Color(0xFF1A1A1A);
-  static const Color muted = Color(0xFF6B7280);
-  static const Color border = Color(0xFFE5E7EB);
-  static const Color success = Color(0xFF10B981);
+  static const Color text = Color(0xFF222831);         // Ink primary text
+  static const Color ink2 = Color(0xFF393E46);         // Ink-2 secondary text
+  static const Color muted = Color(0xFF8A9199);        // Gray secondary text
+  static const Color border = Color(0xFFE4E6E8);       // Border/Line
+  static const Color success = Color(0xFF00868C);
   static const Color danger = Color(0xFFEF4444);
   static const Color warning = Color(0xFFF59E0B);
 
@@ -18,32 +21,32 @@ class AppTheme {
       seedColor: primary,
       brightness: Brightness.light,
       primary: primary,
-      secondary: accent,
+      secondary: primaryDark,
       surface: surface,
     );
     return ThemeData(
       useMaterial3: true,
       colorScheme: base,
       scaffoldBackgroundColor: bg,
-      fontFamily: 'Inter',
+      fontFamily: 'Roboto',
       textTheme: const TextTheme(
-        displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: text, letterSpacing: -0.5),
+        displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: text, letterSpacing: -0.5),
         displayMedium: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: text, letterSpacing: -0.3),
         headlineSmall: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: text),
-        titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: text),
+        titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: text),
         titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: text),
-        bodyLarge: TextStyle(fontSize: 16, color: text, height: 1.5),
-        bodyMedium: TextStyle(fontSize: 14, color: text, height: 1.5),
-        bodySmall: TextStyle(fontSize: 12, color: muted, height: 1.4),
+        bodyLarge: TextStyle(fontSize: 16, color: ink2, height: 1.4),
+        bodyMedium: TextStyle(fontSize: 14, color: ink2, height: 1.4),
+        bodySmall: TextStyle(fontSize: 12, color: muted, height: 1.3),
         labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: surface,
+        backgroundColor: bg,
         foregroundColor: text,
         elevation: 0,
-        scrolledUnderElevation: 0.5,
+        scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: text),
+        titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: text),
       ),
       cardTheme: CardThemeData(
         color: surface,
@@ -60,7 +63,8 @@ class AppTheme {
           foregroundColor: Colors.white,
           minimumSize: const Size.fromHeight(54),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, fontFamily: 'Roboto'),
+          elevation: 0,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -69,13 +73,13 @@ class AppTheme {
           minimumSize: const Size.fromHeight(54),
           side: const BorderSide(color: border),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, fontFamily: 'Roboto'),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: primary,
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          foregroundColor: primaryDark,
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, fontFamily: 'Roboto'),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -83,33 +87,33 @@ class AppTheme {
         fillColor: surface,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: border),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: border, width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: border),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: border, width: 1.5),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: primary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: danger),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: danger, width: 1.5),
         ),
-        labelStyle: const TextStyle(color: muted, fontSize: 14),
+        labelStyle: const TextStyle(color: muted, fontSize: 14, fontWeight: FontWeight.w500),
         hintStyle: const TextStyle(color: muted, fontSize: 14),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: bg,
-        side: const BorderSide(color: border),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        backgroundColor: accentWeak,
+        side: BorderSide.none,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        labelStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: primaryDark),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: surface,
-        selectedItemColor: primary,
+        selectedItemColor: text,
         unselectedItemColor: muted,
         type: BottomNavigationBarType.fixed,
         elevation: 8,

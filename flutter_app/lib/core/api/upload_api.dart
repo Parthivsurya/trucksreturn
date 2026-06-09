@@ -13,7 +13,7 @@ class UploadApi {
       'file': await MultipartFile.fromFile(filePath),
     });
     final r = await _dio.post(
-      '/uploads',
+      '/documents',
       data: form,
       options: Options(contentType: 'multipart/form-data'),
     );
@@ -24,7 +24,7 @@ class UploadApi {
   }
 
   static Future<List<Map<String, dynamic>>> getMyDocuments() async {
-    final r = await _dio.get('/uploads/mine');
+    final r = await _dio.get('/documents/mine');
     if (r.statusCode == 200 && r.data is Map && r.data['documents'] is List) {
       return (r.data['documents'] as List)
           .map((e) => Map<String, dynamic>.from(e as Map))

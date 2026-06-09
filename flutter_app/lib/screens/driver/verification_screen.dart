@@ -1,4 +1,3 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/api/upload_api.dart';
@@ -74,15 +73,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
       if (source == _Source.camera) {
         final x = await ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 85);
         path = x?.path;
-      } else if (source == _Source.gallery) {
+      } else {
         final x = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
         path = x?.path;
-      } else {
-        final res = await FilePicker.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
-        );
-        path = res?.files.single.path;
       }
     } catch (e) {
       if (mounted) showError(context, e.toString());
@@ -103,7 +96,6 @@ class _VerificationScreenState extends State<VerificationScreen> {
   }
 
   Future<_Source?> _pickSource(_DocSpec spec) async {
-    final isPhoto = spec.type.startsWith('vehicle_');
     return showModalBottomSheet<_Source>(
       context: context,
       backgroundColor: Colors.white,
@@ -129,12 +121,6 @@ class _VerificationScreenState extends State<VerificationScreen> {
             title: const Text('Choose from gallery'),
             onTap: () => Navigator.pop(context, _Source.gallery),
           ),
-          if (!isPhoto)
-            ListTile(
-              leading: const Icon(Icons.picture_as_pdf_rounded, color: AppTheme.primary),
-              title: const Text('Pick PDF or image file'),
-              onTap: () => Navigator.pop(context, _Source.file),
-            ),
           const SizedBox(height: 6),
         ]),
       ),
@@ -186,7 +172,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                         Icon(Icons.info_rounded, color: AppTheme.primary),
                         SizedBox(width: 10),
                         Expanded(child: Text(
-                          'Upload your driving licence, RC, insurance and one truck photo to get verified. PDF, JPG, PNG up to 5 MB.',
+                          'Upload your driving licence, RC, insurance and one truck photo to get verified. JPG or PNG up to 5 MB.',
                           style: TextStyle(fontSize: 13),
                         )),
                       ]),
@@ -216,7 +202,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
   }
 }
 
-enum _Source { camera, gallery, file }
+enum _Source { camera, gallery }
 
 class _DocCard extends StatelessWidget {
   final _DocSpec spec;

@@ -18,11 +18,33 @@ class _TruckRegisterScreenState extends State<TruckRegisterScreen> {
   final _homeState = TextEditingController();
   final _regNum = TextEditingController();
   bool _saving = false;
+  bool _loading = true;
+  bool _isEdit = false;
 
   static const _types = [
     'Open Body', 'Closed Container', 'Trailer', 'Mini Truck',
     'Tipper', 'Tanker', 'Refrigerated', 'Flatbed',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExisting();
+  }
+
+  Future<void> _loadExisting() async {
+    final existing = await DriverApi.getTruck();
+    if (!mounted) return;
+    if (existing != null) {
+      _isEdit = true;
+      _truckType = existing['truck_type']?.toString();
+      _capacity.text = existing['capacity_tons']?.toString() ?? '';
+      _regNum.text = existing['registration_number']?.toString() ?? '';
+      _permit.text = existing['permit_number']?.toString() ?? '';
+      _homeState.text = existing['home_state']?.toString() ?? '';
+    }
+    setState(() => _loading = false);
+  }
 
   @override
   void dispose() {
@@ -49,7 +71,7 @@ class _TruckRegisterScreenState extends State<TruckRegisterScreen> {
         registrationNumber: _regNum.text,
       );
       if (!mounted) return;
-      showSuccess(context, 'Truck saved. Awaiting verification.');
+      showSuccess(context, _isEdit ? 'Truck updated.' : 'Truck saved. Awaiting verification.');
       Navigator.pop(context);
     } catch (e) {
       if (mounted) showError(context, e.toString());
@@ -61,8 +83,10 @@ class _TruckRegisterScreenState extends State<TruckRegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Register truck')),
-      body: SafeArea(
+      appBar: AppBar(title: Text(_isEdit ? 'My truck' : 'Register truck')),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          : SafeArea(
         child: Form(
           key: _form,
           child: ListView(
@@ -129,7 +153,7 @@ class _TruckRegisterScreenState extends State<TruckRegisterScreen> {
                 textCapitalization: TextCapitalization.words,
               ),
               const SizedBox(height: 28),
-              PrimaryButton(label: 'Save truck', loading: _saving, onPressed: _save),
+              PrimaryButton(label: _isEdit ? 'Update truck' : 'Save truck', loading: _saving, onPressed: _save),
             ],
           ),
         ),
